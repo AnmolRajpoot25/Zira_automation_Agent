@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Jira AI Agent</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+      color: #172b4d;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 16px;
+    }
+    .logo { font-size: 28px; font-weight: 700; color: #0052cc; margin-bottom: 6px; }
+    .tagline { font-size: 14px; color: #5e6c84; margin-bottom: 36px; }
+    .card {
+      background: #ffffff;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+      padding: 32px;
+      width: 100%;
+      max-width: 520px;
+    }
+    #login-section { text-align: center; }
+    #login-section p { font-size: 14px; color: #5e6c84; margin-bottom: 24px; line-height: 1.6; }
+    .btn-login {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: #0052cc; color: #fff;
+      padding: 12px 28px; border-radius: 6px;
+      font-size: 15px; font-weight: 600;
+      text-decoration: none; border: none; cursor: pointer;
+    }
+    .btn-login:hover { background: #0747a6; }
+    #chat-section { display: none; }
+    .user-bar {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid #ebecf0;
+    }
+    .user-info { font-size: 13px; color: #5e6c84; }
+    .user-info strong { color: #172b4d; font-size: 14px; }
+    .btn-logout {
+      background: #f4f5f7; border: 1px solid #dfe1e6;
+      color: #42526e; font-size: 13px; padding: 6px 14px;
+      border-radius: 4px; cursor: pointer;
+    }
+    #messages {
+      min-height: 180px; max-height: 380px;
+      overflow-y: auto;
+      border: 1px solid #dfe1e6;
+      border-radius: 6px;
+      padding: 14px;
+      margin-bottom: 14px;
+      display: flex; flex-direction: column; gap: 10px;
+      background: #fafbfc;
+    }
+    .msg {
+      padding: 10px 14px; border-radius: 8px;
+      font-size: 14px; line-height: 1.55; max-width: 88%;
+    }
+    .msg.user { background: #deebff; align-self: flex-end; }
+    .msg.agent { background: #fff; border: 1px solid #dfe1e6; align-self: flex-start; }
+    .msg.error { background: #ffebe6; border: 1px solid #ff8f73; color: #bf2600; align-self: flex-start; }
+    .tools-used { font-size: 11px; color: #5e6c84; margin-top: 6px; padding-top: 6px; border-top: 1px solid #ebecf0; }
+    .input-row { display: flex; gap: 8px; }
+    #prompt-input {
+      flex: 1; border: 1px solid #dfe1e6; border-radius: 6px;
+      padding: 10px 14px; font-size: 14px; outline: none; color: #172b4d;
+    }
+    #prompt-input:focus { border-color: #0052cc; }
+    .btn-send {
+      background: #0052cc; color: #fff; border: none; border-radius: 6px;
+      padding: 10px 20px; font-size: 14px; font-weight: 600;
+      cursor: pointer; min-width: 80px;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .btn-send:disabled { background: #b3d4ff; cursor: not-allowed; }
+    .spinner {
+      width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: #fff; border-radius: 50%;
+      animation: spin .65s linear infinite; display: none;
+    }
+    .btn-send.loading .spinner { display: block; }
+    .btn-send.loading .send-text { display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .examples { margin-top: 14px; font-size: 12px; color: #5e6c84; }
+    .examples span {
+      display: inline-block; background: #f4f5f7;
+      border: 1px solid #dfe1e6; border-radius: 4px;
+      padding: 3px 8px; margin: 3px 3px 0 0; cursor: pointer;
+    }
+    .examples span:hover { background: #ebecf0; }
+    #status { font-size: 12px; color: #5e6c84; margin-top: 16px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="logo">Jira AI Agent</div>
+  <p class="tagline">Natural language Jira automation · Powered by Gemini</p>
+
+  <div class="card">
+    <div id="login-section">
+      <p>Connect your Atlassian account to control Jira<br>with plain English commands.</p>
+      <a href="/auth/login" class="btn-login">
+        <svg width="18" height="18" viewBox="0 0 32 32" fill="currentColor">
+          <path d="M15 13L8 2A16 16 0 000 16c0 4.6 1.9 8.7 5 11.6L11.6 16.5C12.4 15.1 13.6 14.1 15 13z"/>
+          <path d="M16 0C9.9 0 4.6 3.3 1.8 8.2L8.4 19.3C9.2 20.7 10.5 21.5 12 21.5h8c1.5 0 2.8-.8 3.6-2.2L30.2 8.2A16 16 0 0016 0z"/>
+          <path d="M27 27.6A16 16 0 0032 16c0-4.6-1.9-8.7-5-11.6L20.4 15.5C19.6 16.9 18.4 21.5 16 21.5c-2.4 0-3.6-4.6-4.4-6L5 4.4A16 16 0 000 16c0 4.6 1.9 8.7 5 11.6L11.6 16.5C12.4 15.1 13.6 10.5 16 10.5c2.4 0 3.6 4.6 4.4 6L27 27.6z"/>
+        </svg>
+        Login with Jira
+      </a>
+    </div>
+
+    <div id="chat-section">
+      <div class="user-bar">
+        <div class="user-info">Logged in as <strong id="user-name">—</strong></div>
+        <button class="btn-logout" onclick="logout()">Logout</button>
+      </div>
+      <div id="messages"></div>
+      <div class="input-row">
+        <input id="prompt-input"
+               placeholder='e.g. "Assign PROJ-42 to me" or "Show open bugs"'
+               onkeydown="if(event.key==='Enter') sendPrompt()"/>
+        <button class="btn-send" id="send-btn" onclick="sendPrompt()">
+          <span class="spinner"></span>
+          <span class="send-text">Send</span>
+        </button>
+      </div>
+      <div class="examples">
+        Try:
+        <span onclick="fill('Show all open issues')">Show all open issues</span>
+        <span onclick="fill('Assign PROJ-1 to me')">Assign issue to me</span>
+        <span onclick="fill('Add comment to PROJ-1: done')">Add a comment</span>
+        <span onclick="fill('Move PROJ-1 to In Progress')">Change status</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="status"></div>
+
+  <script>
+    function setStatus(msg) {
+      document.getElementById('status').textContent = msg;
+    }
+
+    async function init() {
+      setStatus('Checking login status...');
+      try {
+        const res = await fetch('/auth/me', { credentials: 'include' });
+        if (res.ok) {
+          const u = await res.json();
+          showChat(u);
+          const p = new URLSearchParams(location.search);
+          if (p.get('login') === 'success') {
+            addMsg('agent', `Welcome, ${u.display_name}! Connected to ${u.jira_base_url}. What would you like to do?`);
+            history.replaceState({}, '', '/');
+          }
+        } else {
+          showLogin();
+        }
+      } catch (e) {
+        showLogin();
+        setStatus('Could not reach server.');
+      }
+      setStatus('');
+    }
+
+    function showLogin() {
+      document.getElementById('login-section').style.display = 'block';
+      document.getElementById('chat-section').style.display = 'none';
+    }
+
+    function showChat(user) {
+      document.getElementById('login-section').style.display = 'none';
+      document.getElementById('chat-section').style.display = 'block';
+      document.getElementById('user-name').textContent = user.display_name;
+    }
+
+    function fill(text) {
+      document.getElementById('prompt-input').value = text;
+      document.getElementById('prompt-input').focus();
+    }
+
+    function addMsg(role, text, tools) {
+      const box = document.getElementById('messages');
+      const div = document.createElement('div');
+      div.className = `msg ${role}`;
+      div.textContent = text;
+      if (tools && tools.length) {
+        const t = document.createElement('div');
+        t.className = 'tools-used';
+        t.textContent = 'Tools: ' + tools.map(c => c.tool).join(' → ');
+        div.appendChild(t);
+      }
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    async function sendPrompt() {
+      const input = document.getElementById('prompt-input');
+      const prompt = input.value.trim();
+      if (!prompt) return;
+      addMsg('user', prompt);
+      input.value = '';
+      const btn = document.getElementById('send-btn');
+      btn.classList.add('loading');
+      btn.disabled = true;
+      setStatus('Agent is thinking...');
+      try {
+        const res = await fetch('/agent/chat', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          addMsg('agent', data.response, data.tool_calls);
+          setStatus(`Done in ${data.iterations} step(s).`);
+        } else {
+          addMsg('error', `Error: ${data.detail || JSON.stringify(data)}`);
+          setStatus('');
+        }
+      } catch (e) {
+        addMsg('error', 'Network error — check terminal for details.');
+        setStatus('');
+      } finally {
+        btn.classList.remove('loading');
+        btn.disabled = false;
+        input.focus();
+      }
+    }
+
+    async function logout() {
+      await fetch('/auth/logout', { method: 'POST', credentials: 'include' });
+      location.reload();
+    }
+
+    init();
+  </script>
+</body>
+</html>
