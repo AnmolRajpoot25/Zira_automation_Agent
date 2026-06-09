@@ -26,6 +26,12 @@ class User(Base):
         uselist=False,
     )
 
+    # NEW: Relationship to fetch all chat messages for a user
+    chat_messages: Mapped[list["ChatMessage"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+
 
 class JiraConnection(Base):
     __tablename__ = "jira_connections"
@@ -39,3 +45,19 @@ class JiraConnection(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
     user: Mapped[User] = relationship(back_populates="jira_connection")
+
+
+# ==========================================
+# NEW: Chat Memory Model
+# ==========================================
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    role: Mapped[str] = mapped_column(String(50))  # Will be "user" or "model"
+    content: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    # Relationship back to the User model
+    user: Mapped[User] = relationship(back_populates="chat_messages")
