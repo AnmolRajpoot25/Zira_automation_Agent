@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     atlassian_api_base: str = "https://api.atlassian.com"
 
     gemini_model: str = Field(
-        default="gemini-2.5-flash",
+        default="gemini-2.5-flash-lite",
         env="GEMINI_MODEL"
     )
 
