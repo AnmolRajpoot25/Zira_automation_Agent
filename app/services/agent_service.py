@@ -356,7 +356,7 @@ async def run_agent(db: AsyncSession, user: User, user_prompt: str) -> dict:
 
     # Try block added just in case the proxy throws a specific error, to help debug
     try:
-        response = chat.send_message_async(user_prompt)
+        response = chat.send_message(user_prompt)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI Provider Error: {str(e)}")
 
@@ -400,7 +400,7 @@ async def run_agent(db: AsyncSession, user: User, user_prompt: str) -> dict:
                 )
             )
 
-        response = chat.send_message_async(tool_response_parts)
+        response = chat.send_message(tool_response_parts)
 
     return {
         "response": final_text or "Reached maximum steps. Please try a more specific request.",
