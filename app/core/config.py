@@ -4,6 +4,10 @@ from functools import lru_cache
 
 
 class Settings(BaseSettings):
+    database_url: str = Field(..., env="DATABASE_URL")
+    jwt_secret: str = Field(..., env="JWT_SECRET")
+    encryption_key: str = Field(..., env="ENCRYPTION_KEY")
+
     atlassian_client_id: str = Field(..., env="ATLASSIAN_CLIENT_ID")
     atlassian_client_secret: str = Field(..., env="ATLASSIAN_CLIENT_SECRET")
     atlassian_redirect_uri: str = Field(..., env="ATLASSIAN_REDIRECT_URI")
@@ -12,26 +16,39 @@ class Settings(BaseSettings):
     atlassian_token_url: str = "https://auth.atlassian.com/oauth/token"
     atlassian_api_base: str = "https://api.atlassian.com"
 
-    gemini_api_key: str = Field(..., env="GEMINI_API_KEY")
     gemini_model: str = Field(default="gemini-2.5-flash", env="GEMINI_MODEL")
-
-    secret_key: str = Field(..., env="SECRET_KEY")
-    encryption_key: str = Field(..., env="ENCRYPTION_KEY")
-
-    database_url: str = Field(
-        default="sqlite+aiosqlite:///./jira_agent.db", env="DATABASE_URL"
-    )
 
     app_env: str = Field(default="development", env="APP_ENV")
     frontend_url: str = Field(default="http://127.0.0.1:8000", env="FRONTEND_URL")
+    cors_origins: str = Field(default="http://127.0.0.1:8000,http://localhost:8000", env="CORS_ORIGINS")
+    rate_limit_requests: int = Field(default=120, env="RATE_LIMIT_REQUESTS")
+    rate_limit_window_seconds: int = Field(default=60, env="RATE_LIMIT_WINDOW_SECONDS")
+    access_token_expire_minutes: int = Field(default=60 * 24, env="ACCESS_TOKEN_EXPIRE_MINUTES")
 
     oauth_scopes: str = (
-        "read:jira-work write:jira-work read:jira-user"
+        "read:jira-work write:jira-work read:jira-user offline_access"
     )
+
+    @property
+    def sqlalchemy_database_url(self) -> str:
+        if self.database_url.startswith("postgres://"):
+            return self.database_url.replace("postgres://", "postgresql+asyncpg://", 1)
+        if self.database_url.startswith("postgresql://"):
+            return self.database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return self.database_url
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        origins = [origin.strip().rstrip("/") for origin in self.cors_origins.split(",") if origin.strip()]
+        frontend = self.frontend_url.rstrip("/")
+        if frontend not in origins:
+            origins.append(frontend)
+        return origins
 
     class Config:
         env_file = ".env"
         case_sensitive = False
+        extra = "ignore"
 
 
 @lru_cache()

@@ -1,30 +1,34 @@
 ﻿import json
 import httpx
+from fastapi import HTTPException
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 import google.generativeai as genai
 from google.generativeai.types import FunctionDeclaration, Tool, GenerationConfig
 
 from app.core.config import get_settings
-from app.models.user import User
-from app.services.oauth_service import get_valid_access_token
+from app.core.crypto import decrypt_value
+from app.models.user import JiraConnection, User
+from app.services.oauth_service import fetch_current_jira_user, get_valid_access_token
 
 settings = get_settings()
-genai.configure(api_key=settings.gemini_api_key)
 
 MAX_ITERATIONS = 10
 
 
-def _build_system_prompt(user: User) -> str:
-    return f"""You are a Jira assistant helping {user.display_name}.
+def _build_system_prompt(user: User, jira_identity: dict, cloud_id: str) -> str:
+    jira_name = jira_identity.get("displayName") or user.name
+    account_id = jira_identity["accountId"]
+    return f"""You are a Jira assistant helping {jira_name}.
 
 User context:
-- Name: {user.display_name}
+- App user: {user.name}
 - Email: {user.email}
-- Jira accountId: {user.account_id}
-- Jira site: {user.jira_base_url}
+- Jira accountId: {account_id}
+- Jira cloudId: {cloud_id}
 
 Guidelines:
-- When the user says "me", "myself", or "assign to me", use accountId {user.account_id}.
+- When the user says "me", "myself", or "assign to me", use accountId {account_id}.
 - Always confirm the action you took in a clear, friendly sentence.
 - If a tool call fails, explain what went wrong and suggest alternatives.
 - Keep responses concise unless detail is requested.
@@ -306,9 +310,25 @@ def _build_gemini_tools(account_id, display_name):
 
 
 async def run_agent(db: AsyncSession, user: User, user_prompt: str) -> dict:
-    access_token = await get_valid_access_token(db, user)
-    system_prompt = _build_system_prompt(user)
-    tools = _build_gemini_tools(user.account_id, user.display_name)
+    result = await db.execute(
+        select(JiraConnection).where(JiraConnection.user_id == user.id)
+    )
+    connection = result.scalar_one_or_none()
+    if connection is None:
+        raise HTTPException(status_code=400, detail="Connect Jira before using the agent.")
+
+    gemini_api_key = decrypt_value(user.encrypted_gemini_key)
+    if gemini_api_key is None:
+        raise HTTPException(status_code=400, detail="Add your Gemini API key in settings first.")
+
+    access_token = await get_valid_access_token(db, connection)
+    jira_identity = await fetch_current_jira_user(access_token, connection.cloud_id)
+    jira_account_id = jira_identity["accountId"]
+    jira_display_name = jira_identity.get("displayName") or user.name
+
+    genai.configure(api_key=gemini_api_key)
+    system_prompt = _build_system_prompt(user, jira_identity, connection.cloud_id)
+    tools = _build_gemini_tools(jira_account_id, jira_display_name)
 
     model = genai.GenerativeModel(
         model_name=settings.gemini_model,
@@ -347,8 +367,8 @@ async def run_agent(db: AsyncSession, user: User, user_prompt: str) -> dict:
 
             result_str = await _execute_tool(
                 fn_name, fn_args,
-                access_token, user.cloud_id,
-                user.account_id, user.display_name,
+                access_token, connection.cloud_id,
+                jira_account_id, jira_display_name,
             )
             result_data = json.loads(result_str)
             tool_call_log[-1]["result"] = "success" if "error" not in result_data else result_data["error"]

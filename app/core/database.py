@@ -9,13 +9,10 @@ class Base(DeclarativeBase):
 
 def _make_engine():
     settings = get_settings()
-    connect_args = {}
-    if "sqlite" in settings.database_url:
-        connect_args = {"check_same_thread": False}
     return create_async_engine(
-        settings.database_url,
-        connect_args=connect_args,
+        settings.sqlalchemy_database_url,
         echo=settings.app_env == "development",
+        pool_pre_ping=True,
     )
 
 
@@ -34,5 +31,5 @@ async def get_db() -> AsyncSession:
 
 
 async def init_db():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    # Schema changes are managed by Alembic migrations.
+    return None

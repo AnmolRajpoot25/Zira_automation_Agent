@@ -1,79 +1,123 @@
-﻿from fastapi import APIRouter, Request, Depends, HTTPException
-from fastapi.responses import RedirectResponse, JSONResponse
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.crypto import encrypt_value
 from app.core.database import get_db
-from app.core.config import get_settings
-from app.models.user import User
-from app.services import oauth_service
+from app.core.security import (
+    create_access_token,
+    get_current_user,
+    hash_password,
+    verify_password,
+)
+from app.models.user import JiraConnection, User
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-settings = get_settings()
 
 
-def _get_session_user_id(request: Request) -> int | None:
-    return request.session.get("user_id")
+class RegisterRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=256)
+    email: str = Field(min_length=3, max_length=256)
+    password: str = Field(min_length=8, max_length=128)
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: str) -> str:
+        value = value.strip().lower()
+        if "@" not in value:
+            raise ValueError("Invalid email address.")
+        return value
 
 
-@router.get("/login")
-async def login(request: Request):
-    url, state = oauth_service.build_authorization_url()
-    request.session["oauth_state"] = state
-    return RedirectResponse(url)
+class LoginRequest(BaseModel):
+    email: str = Field(min_length=3, max_length=256)
+    password: str = Field(min_length=1, max_length=128)
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: str) -> str:
+        return value.strip().lower()
 
 
-@router.get("/callback")
-async def callback(
-    request: Request,
-    code: str,
-    state: str,
-    db: AsyncSession = Depends(get_db),
-):
-    token_data = await oauth_service.exchange_code_for_tokens(code)
-    identity = await oauth_service.fetch_user_identity(token_data["access_token"])
-    user = await oauth_service.upsert_user(db, identity, token_data)
-    request.session["user_id"] = user.id
-    request.session["account_id"] = user.account_id
-    return RedirectResponse(f"{settings.frontend_url}/auth/set-session?uid={user.id}")
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
 
 
-@router.get("/set-session")
-async def set_session(request: Request, uid: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).where(User.id == uid))
+class GeminiKeyRequest(BaseModel):
+    gemini_api_key: str = Field(min_length=20, max_length=512)
+
+
+class UserResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    email: str
+    jira_connected: bool
+    gemini_key_configured: bool
+
+
+async def _status_for(user: User, db: AsyncSession) -> UserResponse:
+    result = await db.execute(
+        select(JiraConnection.id).where(JiraConnection.user_id == user.id)
+    )
+    return UserResponse(
+        id=user.id,
+        name=user.name,
+        email=user.email,
+        jira_connected=result.scalar_one_or_none() is not None,
+        gemini_key_configured=user.encrypted_gemini_key is not None,
+    )
+
+
+@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
+    existing = await db.execute(select(User).where(User.email == body.email))
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=409, detail="Email is already registered.")
+
+    user = User(
+        name=body.name.strip(),
+        email=body.email,
+        password_hash=hash_password(body.password),
+    )
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+    return TokenResponse(access_token=create_access_token(user))
+
+
+@router.post("/login", response_model=TokenResponse)
+async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User).where(User.email == body.email))
     user = result.scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found.")
-    request.session["user_id"] = uid
-    response = RedirectResponse(f"{settings.frontend_url}?login=success")
-    return response
-
-
-@router.get("/me")
-async def me(request: Request, db: AsyncSession = Depends(get_db)):
-    user_id = _get_session_user_id(request)
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Not authenticated.")
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found.")
-    return {
-        "account_id": user.account_id,
-        "email": user.email,
-        "display_name": user.display_name,
-        "jira_base_url": user.jira_base_url,
-    }
+    if user is None or not verify_password(body.password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Invalid email or password.")
+    return TokenResponse(access_token=create_access_token(user))
 
 
 @router.post("/logout")
-async def logout(request: Request):
-    request.session.clear()
-    return JSONResponse({"message": "Logged out."})
+async def logout(_: User = Depends(get_current_user)):
+    return {"message": "Logged out."}
 
 
-@router.get("/debug-session")
-async def debug_session(request: Request):
-    if settings.app_env != "development":
-        raise HTTPException(status_code=404)
-    return {"session": dict(request.session), "cookies": dict(request.cookies)}
+@router.get("/me", response_model=UserResponse)
+async def me(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await _status_for(user, db)
+
+
+@router.post("/gemini-key", response_model=UserResponse)
+async def save_gemini_key(
+    body: GeminiKeyRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    user.encrypted_gemini_key = encrypt_value(body.gemini_api_key.strip())
+    await db.commit()
+    await db.refresh(user)
+    return await _status_for(user, db)

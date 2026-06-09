@@ -3,11 +3,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from starlette.middleware.sessions import SessionMiddleware
 
 from app.core.config import get_settings
-from app.core.database import init_db
-from app.routers import auth, agent
+from app.core.rate_limit import RateLimitMiddleware
+from app.routers import agent, auth, jira
 
 FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend")
 
@@ -15,33 +14,27 @@ settings = get_settings()
 
 app = FastAPI(
     title="Jira AI Agent",
-    description="OAuth-authenticated Jira agent powered by Gemini + FastAPI",
-    version="0.1.0",
+    description="Multi-user Jira agent powered by Gemini + FastAPI",
+    version="1.0.0",
 )
 
 app.add_middleware(
-    SessionMiddleware,
-    secret_key=settings.secret_key,
-    session_cookie="jira_agent_session",
-    max_age=3600,
-    https_only=False,
-    same_site="lax",
+    RateLimitMiddleware,
+    requests_per_window=settings.rate_limit_requests,
+    window_seconds=settings.rate_limit_window_seconds,
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.frontend_url, "http://127.0.0.1:8000/"],
+    allow_origins=settings.cors_origin_list,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
 app.include_router(auth.router)
+app.include_router(jira.router)
 app.include_router(agent.router)
-
-@app.on_event("startup")
-async def on_startup():
-    await init_db()
 
 @app.get("/health")
 async def health():
