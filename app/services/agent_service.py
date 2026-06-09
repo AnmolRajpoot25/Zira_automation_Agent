@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 import google.generativeai as genai
 from google.generativeai.types import FunctionDeclaration, Tool, GenerationConfig
+from google.api_core.client_options import ClientOptions  # NEW IMPORT
 
 from app.core.config import get_settings
 from app.core.crypto import decrypt_value
@@ -95,7 +96,7 @@ async def _execute_tool(name, args, access_token, cloud_id, account_id, display_
             project_key = args["project_key"]
             summary = args["summary"]
             issue_type = args.get("issue_type", "Task")
-            
+
             payload = {
                 "fields": {
                     "project": {"key": project_key},
@@ -103,7 +104,7 @@ async def _execute_tool(name, args, access_token, cloud_id, account_id, display_
                     "issuetype": {"name": issue_type},
                 }
             }
-            
+
             if "description" in args:
                 payload["fields"]["description"] = {
                     "type": "doc", "version": 1,
@@ -176,12 +177,12 @@ async def _execute_tool(name, args, access_token, cloud_id, account_id, display_
         elif name == "add_comment":
             key = args["issue_key"]
             data = await _jira_call("post", f"/issue/{key}/comment", access_token, cloud_id,
-                json={"body": {
-                    "type": "doc", "version": 1,
-                    "content": [{"type": "paragraph", "content": [
-                        {"type": "text", "text": args["body"]}
-                    ]}],
-                }})
+                                    json={"body": {
+                                        "type": "doc", "version": 1,
+                                        "content": [{"type": "paragraph", "content": [
+                                            {"type": "text", "text": args["body"]}
+                                        ]}],
+                                    }})
             return json.dumps({"success": True, "comment_id": data.get("id")})
 
         elif name == "get_transitions":
@@ -230,7 +231,8 @@ def _build_gemini_tools(account_id, display_name):
             parameters={
                 "type": "object",
                 "properties": {
-                    "jql": {"type": "string", "description": "JQL query. Examples: 'project=PROJ AND status=Open', 'assignee=currentUser()', 'created>=-7d'"},
+                    "jql": {"type": "string",
+                            "description": "JQL query. Examples: 'project=PROJ AND status=Open', 'assignee=currentUser()', 'created>=-7d'"},
                     "max_results": {"type": "integer", "description": "Max results 1-20, default 10"},
                 },
                 "required": ["jql"],
@@ -326,7 +328,18 @@ async def run_agent(db: AsyncSession, user: User, user_prompt: str) -> dict:
     jira_account_id = jira_identity["accountId"]
     jira_display_name = jira_identity.get("displayName") or user.name
 
-    genai.configure(api_key=gemini_api_key)
+    # =========================================================================
+    # NEW PROXY CONFIGURATION
+    # Replace the "api_endpoint" string below with your Cloudflare Worker URL
+    # =========================================================================
+    genai.configure(
+        api_key=gemini_api_key,
+        transport="rest",
+        client_options=ClientOptions(
+            api_endpoint="geminiproxy.rajpootanmol779.workers.dev"
+        )
+    )
+
     system_prompt = _build_system_prompt(user, jira_identity, connection.cloud_id)
     tools = _build_gemini_tools(jira_account_id, jira_display_name)
 
@@ -340,7 +353,12 @@ async def run_agent(db: AsyncSession, user: User, user_prompt: str) -> dict:
     chat = model.start_chat(history=[])
     tool_call_log: list[dict] = []
     final_text = ""
-    response = await chat.send_message_async(user_prompt)
+
+    # Try block added just in case the proxy throws a specific error, to help debug
+    try:
+        response = await chat.send_message_async(user_prompt)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI Provider Error: {str(e)}")
 
     import google.generativeai.protos as protos
 
