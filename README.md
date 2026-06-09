@@ -1,272 +1,485 @@
 # 🤖 Jira AI Agent
 
-> **Natural language Jira automation** — talk to your project management tool like a human. Powered by **Google Gemini**, secured with **Atlassian OAuth 2.0**, built on **FastAPI + MCP**.
+> **Natural Language Jira Automation powered by Gemini AI, Atlassian OAuth 2.0, FastAPI, MCP, and PostgreSQL.**
 
 [![Python](https://img.shields.io/badge/Python-3.11-blue?logo=python)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green?logo=fastapi)](https://fastapi.tiangolo.com)
 [![Gemini](https://img.shields.io/badge/Gemini-2.5_Flash-orange?logo=google)](https://ai.google.dev)
 [![MCP](https://img.shields.io/badge/MCP-Protocol-purple)](https://modelcontextprotocol.io)
-[![OAuth](https://img.shields.io/badge/OAuth-2.0_3LO-blue?logo=atlassian)](https://developer.atlassian.com)
+[![Atlassian OAuth](https://img.shields.io/badge/OAuth-2.0-blue?logo=atlassian)](https://developer.atlassian.com)
+[![Render](https://img.shields.io/badge/Deploy-Render-46E3B7?logo=render)](https://render.com)
+[![Neon](https://img.shields.io/badge/Database-Neon-00E599?logo=postgresql)](https://neon.tech)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue?logo=postgresql)](https://postgresql.org)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+---
+
+## 🌐 Live Demo
+
+### 🚀 Live Application
+
+https://zira-automation-agent.onrender.com
+
+### 💻 Source Code
+
+https://github.com/AnmolRajpoot25/jira-ai-agent
+
+---
+
+## 🎥 Demo
+
+> Add a GIF or short demo video here.
+
+```md
+![Demo](assets/demo.gif)
+```
+
+---
+
+## ✨ Highlights
+
+- 🤖 AI-powered Jira Assistant using Gemini 2.5 Flash
+- 🔐 Secure Atlassian OAuth 2.0 Authentication
+- 🧠 Agentic Tool Calling with MCP Architecture
+- 📋 Natural Language Issue Management
+- 🗄️ PostgreSQL Persistence using Neon
+- ⚡ FastAPI Async Backend
+- 🔒 Encrypted Token Storage using Fernet
+- ☁️ Production Deployment on Render
+- 🔄 Multi-step Function Calling
+- 🚀 Production-ready Architecture
 
 ---
 
 ## 🎯 What This Does
 
-Instead of clicking through Jira's UI, you type natural language:
+Instead of clicking through Jira's UI, you can simply type instructions in plain English:
 
-| You say | Agent does |
-|---|---|
-| *"Create a bug: login broken on mobile, High priority, due Friday"* | Creates issue with correct type, priority, due date |
-| *"Assign MP-5 to me and move it to In Progress"* | Updates assignee + triggers status transition |
-| *"Show all open bugs assigned to me"* | Runs JQL query, returns formatted results |
-| *"Add comment to MP-3: ready for code review"* | Posts comment via Jira REST API |
-| *"What's the status of MP-10?"* | Fetches full issue detail |
+| You Say | Agent Does |
+|----------|------------|
+| "Create a bug: login broken on mobile, High priority, due Friday" | Creates issue with proper metadata |
+| "Assign MP-5 to me and move it to In Progress" | Updates assignee and workflow status |
+| "Show all open bugs assigned to me" | Executes JQL search |
+| "Add comment to MP-3: ready for code review" | Posts comment via Jira API |
+| "What's the status of MP-10?" | Retrieves issue details |
 
-The agent figures out **which tools to call**, **in what order**, and **with what arguments** — all from a single sentence.
+The agent automatically determines:
+
+- Which tools to call
+- What arguments are required
+- Which sequence of actions to perform
+- How to translate natural language into Jira operations
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ System Design
 
+![System Design](assets/system-design.png)
+
+### Architecture Overview
+
+```text
+User
+ │
+ ▼
+Frontend (HTML/CSS/JS)
+ │
+ ▼
+FastAPI Backend
+ │
+ ├── Authentication Layer
+ │     └── Atlassian OAuth 2.0
+ │
+ ├── Agent Orchestrator
+ │     └── Gemini 2.5 Flash
+ │
+ ├── MCP Tool Layer
+ │     ├── create_issue
+ │     ├── update_issue
+ │     ├── search_issues
+ │     ├── add_comment
+ │     └── get_issue
+ │
+ └── Database Layer
+       └── Neon PostgreSQL
+
+               │
+               ▼
+
+          Jira REST API
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  Phase 1 — OAuth 2.0 Login (Atlassian 3LO)                 │
-│                                                              │
-│  Client UI → Atlassian OAuth → Backend Orchestrator         │
-│           → Encrypt tokens → Store in DB → Session set      │
-└─────────────────────────────────────────────────────────────┘
 
-┌─────────────────────────────────────────────────────────────┐
-│  Phase 2 — Identity-Aware Agent Execution                   │
-│                                                              │
-│  User Prompt → Orchestrator → Inject user context           │
-│             → Gemini (tool-use loop)                        │
-│             → Jira REST API (signed with user token)        │
-│             → Natural language response → UI                │
-└─────────────────────────────────────────────────────────────┘
+---
+
+## 🔄 Agent Workflow
+
+```text
+1. User Prompt
+      │
+      ▼
+2. FastAPI Agent Endpoint
+      │
+      ▼
+3. Gemini Receives:
+      - User Prompt
+      - Tool Schemas
+      - User Context
+      │
+      ▼
+4. Gemini Chooses Tool(s)
+      │
+      ▼
+5. MCP Tool Execution
+      │
+      ▼
+6. Jira REST API
+      │
+      ▼
+7. Tool Response
+      │
+      ▼
+8. Gemini Generates Final Answer
+      │
+      ▼
+9. User Receives Response
 ```
 
-### Tech Stack
+---
 
-| Layer | Technology | Why |
-|---|---|---|
-| **LLM** | Google Gemini 2.5 Flash | Native function calling, free tier (1000 req/day) |
-| **Backend** | FastAPI + Python 3.11 | Async-first, automatic OpenAPI docs |
-| **Auth** | Atlassian OAuth 2.0 (3LO) | Industry-standard, per-user token isolation |
-| **Agent Protocol** | MCP (Model Context Protocol) | Emerging standard for LLM tool use |
-| **Database** | SQLite / PostgreSQL (SQLAlchemy async) | Encrypted token storage at rest |
-| **Security** | Fernet encryption (AES-128-CBC + HMAC) | Tokens never stored in plaintext |
-| **Frontend** | Vanilla JS + FastAPI static files | Zero-dependency, fully functional UI |
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|---------|------------|
+| LLM | Gemini 2.5 Flash |
+| Backend | FastAPI |
+| Language | Python 3.11 |
+| Database | PostgreSQL (Neon) |
+| ORM | SQLAlchemy Async |
+| Authentication | Atlassian OAuth 2.0 |
+| Agent Protocol | MCP |
+| Security | Fernet Encryption |
+| Deployment | Render |
+| Frontend | HTML, CSS, JavaScript |
+| HTTP Client | HTTPX |
+| Migrations | Alembic |
 
 ---
 
 ## 🔐 Security Design
 
-This project was built with production security patterns from day one:
+This project follows production-grade security practices:
 
-- **OAuth tokens encrypted at rest** using Fernet (AES-128-CBC + HMAC-SHA256) — raw tokens never touch the database
-- **Per-user token isolation** — each agent run uses only that user's credentials, no cross-user token access possible
-- **CSRF protection** via OAuth state parameter validation
-- **Session cookies** are `HttpOnly`, `Secure` in production, `SameSite` configured per environment
-- **No secrets in code** — all credentials via environment variables with Pydantic validation on startup
+### Authentication
+- OAuth 2.0 Authorization Code Flow (3LO)
+- State validation for CSRF protection
+- Secure session handling
+
+### Token Security
+- OAuth tokens encrypted at rest
+- Fernet encryption (AES + HMAC)
+- No plaintext credentials stored
+
+### User Isolation
+- Per-user token storage
+- Identity-aware execution
+- Complete credential separation
+
+### Configuration Security
+- Environment-variable driven configuration
+- Startup validation via Pydantic
+- No secrets hardcoded in source code
 
 ---
 
 ## 🛠️ Jira Tools Available
 
 | Tool | Description |
-|---|---|
-| `get_current_user` | Returns logged-in user's accountId — used for "assign to me" |
-| `get_projects` | Lists all accessible Jira projects |
-| `get_issue` | Fetch full issue details by key |
-| `search_issues` | JQL-powered search with up to 20 results |
-| `create_issue` | Create tasks, bugs, stories with full metadata |
-| `update_issue` | Update summary, assignee, priority, due date, labels, status |
-| `delete_issue` | Permanently delete an issue |
-| `add_comment` | Post a comment on any issue |
-| `get_transitions` | List valid status transitions before changing status |
-
----
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Python 3.11+
-- Atlassian account with a Jira project
-- Google AI Studio account (free Gemini API key)
-
-### 1. Clone and install
-
-```bash
-git clone https://github.com/YOUR_USERNAME/jira-ai-agent
-cd jira-ai-agent
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-### 2. Configure
-
-```bash
-cp .env.example .env
-```
-
-Fill in `.env`:
-
-```env
-# Atlassian OAuth — developer.atlassian.com/console/myapps/
-ATLASSIAN_CLIENT_ID=your_client_id
-ATLASSIAN_CLIENT_SECRET=your_client_secret
-ATLASSIAN_REDIRECT_URI=http://localhost:8000/auth/callback
-
-# Google Gemini — aistudio.google.com/app/apikey (free, no card needed)
-GEMINI_API_KEY=your_gemini_key
-GEMINI_MODEL=gemini-2.5-flash
-
-# Generate these
-SECRET_KEY=        # python -c "import secrets; print(secrets.token_hex(32))"
-ENCRYPTION_KEY=    # python -m app.core.crypto
-
-DATABASE_URL=sqlite+aiosqlite:///./jira_agent.db
-APP_ENV=development
-FRONTEND_URL=http://localhost:8000
-```
-
-### 3. Run
-
-```bash
-uvicorn app.main:app --reload --port 8000
-```
-
-Open `http://localhost:8000` → Login with Jira → Start chatting.
+|--------|------------|
+| get_current_user | Fetch authenticated Jira user |
+| get_projects | List available Jira projects |
+| get_issue | Retrieve issue details |
+| search_issues | Execute JQL search |
+| create_issue | Create bug, task, or story |
+| update_issue | Modify issue attributes |
+| delete_issue | Delete issue |
+| add_comment | Add issue comments |
+| get_transitions | Retrieve valid workflow transitions |
 
 ---
 
 ## 💬 Example Prompts
 
-```
+```text
 What projects do I have access to?
+
 Show all open issues in project MP
-Create a task in project MP: "Fix navbar bug" priority High due 2026-05-01 assign to me
+
+Create a task in project MP:
+"Fix navbar bug"
+priority High
+due 2026-05-01
+assign to me
+
 Assign MP-3 to me and move it to In Progress
-Add comment to MP-5: "Blocked by API rate limits, investigating"
-Show all bugs assigned to me
+
+Add comment to MP-5:
+"Blocked by API rate limits, investigating"
+
 Move MP-7 to Done
+
+Show all bugs assigned to me
+
 Set priority of MP-2 to Highest and due date to next Friday
-Create a story: "User can reset password via email" in project MP
+
+Create a story:
+"User can reset password via email"
 ```
 
 ---
 
-## 📁 Project Structure
+## 📈 Project Metrics
 
-```
-jira-ai-agent/
-├── app/
-│   ├── core/
-│   │   ├── config.py          # Pydantic settings — env var validation
-│   │   ├── crypto.py          # Fernet token encryption at rest
-│   │   └── database.py        # SQLAlchemy async engine
-│   ├── models/
-│   │   └── user.py            # User table — identity + encrypted tokens
-│   ├── routers/
-│   │   ├── auth.py            # OAuth flow: /login /callback /me /logout
-│   │   └── agent.py           # POST /agent/chat — agent loop entry point
-│   ├── services/
-│   │   ├── oauth_service.py   # Phase 1: full OAuth 2.0 3LO flow
-│   │   └── agent_service.py   # Phase 2: Gemini tool-use loop + Jira tools
-│   └── main.py                # FastAPI app, middleware, startup
-├── mcp_server/                # MCP server (Claude-compatible tool definitions)
-├── frontend/
-│   └── index.html             # Chat UI — login + agent interface
-├── requirements.txt
-└── .env.example
-```
+- ✅ 10+ Jira Automation Tools
+- ✅ OAuth 2.0 Integration
+- ✅ MCP-Based Tool Architecture
+- ✅ Production Cloud Deployment
+- ✅ PostgreSQL Persistence
+- ✅ End-to-End AI Agent Workflow
+- ✅ Multi-Step Function Calling
+- ✅ Real Jira API Integration
+- ✅ Secure Token Encryption
 
 ---
 
-## 🔄 Agent Loop (How It Works)
+## 🚀 Local Setup
 
-```
-1. User sends: "Assign MP-5 to me and move to In Progress"
+### Prerequisites
 
-2. Gemini receives prompt + tool schemas + system prompt with user context
-   (system prompt includes: "User is Anmol Rajput, accountId: 712020:...")
+- Python 3.11+
+- Atlassian Account
+- Jira Project
+- Gemini API Key
 
-3. Gemini decides: call get_current_user → then update_issue
-
-4. Tool call 1: get_current_user()
-   → returns { accountId: "712020:5c7d...", displayName: "Anmol Rajput" }
-
-5. Tool call 2: update_issue(issue_key="MP-5", assignee_account_id="712020:5c7d...", status_transition_name="In Progress")
-   → calls Jira REST API with user's OAuth token
-   → returns { success: true }
-
-6. Gemini generates: "Done! MP-5 is now assigned to you and moved to In Progress."
-
-7. Response shown in UI. Total: 2 iterations, ~1.2s.
-```
-
----
-
-## 🌐 Deployment
-
-### Railway (recommended)
+### Installation
 
 ```bash
-# 1. Push to GitHub
-git add . && git commit -m "deploy" && git push
+git clone https://github.com/YOUR_USERNAME/jira-ai-agent.git
 
-# 2. railway.app → New Project → Deploy from GitHub
+cd jira-ai-agent
 
-# 3. Add environment variables in Railway dashboard
+python -m venv .venv
 
-# 4. Update Atlassian callback URL to:
-#    https://YOUR-APP.railway.app/auth/callback
+source .venv/bin/activate
+# Windows
+.venv\Scripts\activate
+
+pip install -r requirements.txt
 ```
 
-### Environment variables for production
+### Configure Environment
+
+```bash
+cp .env.example .env
+```
+
+Fill in:
+
+```env
+ATLASSIAN_CLIENT_ID=your_client_id
+ATLASSIAN_CLIENT_SECRET=your_client_secret
+ATLASSIAN_REDIRECT_URI=http://localhost:8000/auth/callback
+
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-2.5-flash
+
+JWT_SECRET=your_secret
+ENCRYPTION_KEY=your_fernet_key
+
+DATABASE_URL=postgresql://...
+
+APP_ENV=development
+
+FRONTEND_URL=http://localhost:8000
+```
+
+### Run
+
+```bash
+uvicorn app.main:app --reload --port 8000
+```
+
+Open:
+
+```text
+http://localhost:8000
+```
+
+---
+
+## 🌐 Production Deployment
+
+### Render
+
+Build Command
+
+```bash
+pip install -r requirements.txt
+```
+
+Start Command
+
+```bash
+alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+```
+
+### Production Environment Variables
 
 ```env
 APP_ENV=production
-FRONTEND_URL=https://YOUR-APP.railway.app
-ATLASSIAN_REDIRECT_URI=https://YOUR-APP.railway.app/auth/callback
-DATABASE_URL=sqlite+aiosqlite:///./jira_agent.db
+
+DATABASE_URL=<Neon PostgreSQL URL>
+
+JWT_SECRET=<secret>
+
+ENCRYPTION_KEY=<fernet_key>
+
+ATLASSIAN_CLIENT_ID=<client_id>
+
+ATLASSIAN_CLIENT_SECRET=<client_secret>
+
+ATLASSIAN_REDIRECT_URI=https://zira-automation-agent.onrender.com/auth/callback
+
+GEMINI_API_KEY=<api_key>
+
+GEMINI_MODEL=gemini-2.5-flash
+
+FRONTEND_URL=https://zira-automation-agent.onrender.com
 ```
 
 ---
 
 ## 🗺️ Roadmap
 
-- [ ] PostgreSQL support for production persistence
-- [ ] Multi-site Jira support (site picker on login)
-- [ ] Streaming responses (Server-Sent Events)
-- [ ] Confluence integration (create/update pages)
-- [ ] Slack notification on issue updates
-- [ ] Claude model support (swap back via env var)
-- [ ] Rate limiting per user
-- [ ] Audit log of all agent actions
+- [ ] Multi-Agent Workflows
+- [ ] Confluence Integration
+- [ ] Slack Integration
+- [ ] Streaming Responses
+- [ ] Audit Logging Dashboard
+- [ ] Multi-Tenant Jira Support
+- [ ] Analytics Dashboard
+- [ ] Role-Based Access Control
 
 ---
 
-## 🧠 What I Learned Building This
+## 🏆 Engineering Highlights
 
-- **OAuth 2.0 three-legged flow** in production — state validation, token exchange, refresh token rotation
-- **Agentic AI patterns** — multi-step tool-use loops, system prompt injection, identity-aware context
-- **MCP (Model Context Protocol)** — the emerging standard for connecting LLMs to external tools
-- **Async Python at scale** — SQLAlchemy async, httpx async, FastAPI dependency injection
-- **Security engineering** — encryption at rest, per-user credential isolation, CSRF protection
+### Agentic AI Systems
+
+- Multi-step tool-calling workflows
+- Function calling with Gemini
+- Context-aware orchestration
+- Identity-aware prompt injection
+
+### Authentication & Security
+
+- OAuth 2.0 Authorization Code Flow
+- CSRF Protection
+- Encrypted OAuth token storage
+- User-level credential isolation
+
+### Backend Engineering
+
+- FastAPI Async Architecture
+- SQLAlchemy Async ORM
+- Dependency Injection
+- Modular Service Design
+
+### Production Infrastructure
+
+- Render Deployment
+- Neon PostgreSQL
+- Alembic Migrations
+- Environment-driven Configuration
+
+### AI Engineering
+
+- Tool-Augmented LLM Workflows
+- MCP Integration
+- Prompt Engineering
+- Function Calling Systems
+- Real-world Agent Design
+
+---
+
+## 📁 Project Structure
+
+```text
+jira-ai-agent/
+│
+├── app/
+│   ├── core/
+│   │   ├── config.py
+│   │   ├── crypto.py
+│   │   └── database.py
+│   │
+│   ├── models/
+│   │   └── user.py
+│   │
+│   ├── routers/
+│   │   ├── auth.py
+│   │   └── agent.py
+│   │
+│   ├── services/
+│   │   ├── oauth_service.py
+│   │   └── agent_service.py
+│   │
+│   └── main.py
+│
+├── frontend/
+│   └── index.html
+│
+├── mcp_server/
+│
+├── requirements.txt
+│
+└── README.md
+```
 
 ---
 
 ## 👨‍💻 Author
 
-**Anmol Rajput**
-- Built as a portfolio project demonstrating production AI engineering patterns
-- Combines OAuth security, agentic AI, and real-world API integration in one system
+### Anmol Rajpoot
+
+**B.Tech, Computer Science & Engineering**
+
+Indian Institute of Information Technology (IIIT) Bhopal
+
+### Areas of Interest
+
+- Agentic AI
+- Generative AI
+- LLM Applications
+- NLP Systems
+- Retrieval-Augmented Generation
+- Full-Stack AI Products
+
+### Connect
+
+GitHub: https://github.com/AnmolRajpoot25
+
+LinkedIn: https://www.linkedin.com/in/anmol-rajpoot/
 
 ---
 
 ## 📄 License
 
-MIT — free to use, modify, and deploy.
+MIT License
+
+Copyright (c) 2026 Anmol Rajpoot
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files to deal in the Software without restriction.
+
+---
+
+⭐ If you found this project useful, consider giving it a star on GitHub.
