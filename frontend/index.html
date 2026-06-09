@@ -1,750 +1,367 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>AgentSprint</title>
-  <style>
-    :root {
-      --ink: #111827;
-      --muted: #667085;
-      --line: #d8dee9;
-      --panel: rgba(255, 255, 255, 0.88);
-      --panel-strong: #ffffff;
-      --blue: #0f62fe;
-      --blue-dark: #0a46b7;
-      --teal: #0f766e;
-      --green: #067647;
-      --amber: #b54708;
-      --red: #b42318;
-      --violet: #6d28d9;
-      --shadow: 0 22px 60px rgba(17, 24, 39, 0.12);
-      --shadow-soft: 0 10px 28px rgba(17, 24, 39, 0.08);
-    }
-
-    *, *::before, *::after { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      color: var(--ink);
-      background:
-        linear-gradient(90deg, rgba(15, 98, 254, 0.045) 1px, transparent 1px),
-        linear-gradient(0deg, rgba(15, 118, 110, 0.04) 1px, transparent 1px),
-        linear-gradient(135deg, #f8fbff 0%, #f6f7fb 45%, #fff8f2 100%);
-      background-size: 32px 32px, 32px 32px, auto;
-    }
-
-    button, input, textarea { font: inherit; }
-    button { cursor: pointer; }
-
-    .topbar {
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      min-height: 68px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 18px;
-      padding: 0 28px;
-      border-bottom: 1px solid rgba(216, 222, 233, 0.85);
-      background: rgba(255, 255, 255, 0.76);
-      backdrop-filter: blur(18px);
-    }
-
-    .brand {
-      display: inline-flex;
-      align-items: center;
-      gap: 11px;
-      font-weight: 800;
-      letter-spacing: 0;
-    }
-
-    .brand-mark {
-      width: 34px;
-      height: 34px;
-      display: grid;
-      place-items: center;
-      border-radius: 8px;
-      color: #fff;
-      background: linear-gradient(135deg, var(--blue), var(--teal));
-      box-shadow: 0 10px 22px rgba(15, 98, 254, 0.24);
-      font-size: 13px;
-      font-weight: 900;
-    }
-
-    .nav {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .nav button, .link-btn {
-      border: 1px solid transparent;
-      background: transparent;
-      color: #475467;
-      padding: 9px 12px;
-      border-radius: 8px;
-      font-weight: 700;
-      transition: background 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
-    }
-
-    .nav button:hover, .link-btn:hover {
-      background: #f2f5fb;
-      color: var(--ink);
-    }
-
-    .nav button.active {
-      background: #eef5ff;
-      color: var(--blue-dark);
-      border-color: #bfd4ff;
-    }
-
-    .shell {
-      width: min(1180px, calc(100% - 40px));
-      margin: 0 auto;
-      padding: 28px 0 44px;
-    }
-
-    .primary, .secondary, .danger {
-      min-height: 42px;
-      border-radius: 8px;
-      border: 1px solid transparent;
-      padding: 0 16px;
-      font-weight: 800;
-      transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease, border-color 160ms ease;
-    }
-
-    .primary {
-      color: #fff;
-      background: linear-gradient(135deg, var(--blue), #1d8b84);
-      box-shadow: 0 12px 24px rgba(15, 98, 254, 0.20);
-    }
-
-    .primary:hover { transform: translateY(-1px); box-shadow: 0 16px 28px rgba(15, 98, 254, 0.24); }
-    .primary:disabled { background: #9dbdf5; box-shadow: none; cursor: not-allowed; transform: none; }
-    .secondary { background: #fff; color: #24324a; border-color: #cfd7e6; }
-    .secondary:hover { border-color: #aab8cf; box-shadow: var(--shadow-soft); }
-    .danger { background: #fff5f4; color: var(--red); border-color: #ffc7c0; }
-    .danger:hover { background: #ffecea; }
-
-    .panel, .card {
-      background: var(--panel);
-      border: 1px solid rgba(216, 222, 233, 0.92);
-      border-radius: 8px;
-      box-shadow: var(--shadow-soft);
-      backdrop-filter: blur(18px);
-    }
-
-    .panel { padding: 24px; }
-    .card { padding: 18px; }
-
-    h1, h2, h3, p { margin: 0; }
-    h1 { font-size: 32px; line-height: 1.08; letter-spacing: 0; }
-    h2 { font-size: 18px; line-height: 1.25; letter-spacing: 0; }
-    h3 { font-size: 13px; line-height: 1.2; letter-spacing: 0; color: #475467; text-transform: uppercase; }
-    p { color: var(--muted); line-height: 1.55; }
-
-    .auth-wrap {
-      min-height: calc(100vh - 69px);
-      display: grid;
-      align-items: center;
-      padding: 34px 24px;
-    }
-
-    .auth-stage {
-      width: min(1040px, 100%);
-      margin: 0 auto;
-      display: grid;
-      grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
-      gap: 24px;
-      align-items: stretch;
-    }
-
-    .auth-copy {
-      position: relative;
-      overflow: hidden;
-      padding: 34px;
-      min-height: 520px;
-      color: #fff;
-      background:
-        linear-gradient(135deg, rgba(13, 36, 78, 0.94), rgba(15, 118, 110, 0.92)),
-        repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0 1px, transparent 1px 18px);
-      border-radius: 8px;
-      box-shadow: var(--shadow);
-    }
-
-    .auth-copy h1 {
-      max-width: 480px;
-      margin-top: 98px;
-      font-size: 48px;
-      color: #fff;
-    }
-
-    .auth-copy p { max-width: 500px; margin-top: 16px; color: rgba(255, 255, 255, 0.78); }
-
-    .system-card {
-      position: absolute;
-      left: 34px;
-      right: 34px;
-      bottom: 34px;
-      display: grid;
-      gap: 10px;
-      padding: 16px;
-      border: 1px solid rgba(255, 255, 255, 0.20);
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.11);
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
-      backdrop-filter: blur(14px);
-    }
-
-    .signal-row {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-    }
-
-    .signal {
-      padding: 12px;
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.12);
-      border: 1px solid rgba(255, 255, 255, 0.14);
-    }
-
-    .signal strong { display: block; font-size: 18px; color: #fff; }
-    .signal span { display: block; margin-top: 4px; font-size: 12px; color: rgba(255, 255, 255, 0.72); }
-
-    .auth-panel {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      padding: 34px;
-      background: rgba(255, 255, 255, 0.92);
-      box-shadow: var(--shadow);
-    }
-
-    .eyebrow {
-      display: inline-flex;
-      width: fit-content;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 18px;
-      padding: 7px 10px;
-      border: 1px solid #d7e3ff;
-      border-radius: 999px;
-      background: #f1f6ff;
-      color: var(--blue-dark);
-      font-size: 12px;
-      font-weight: 850;
-    }
-
-    .eyebrow::before {
-      content: "";
-      width: 8px;
-      height: 8px;
-      border-radius: 999px;
-      background: var(--teal);
-      box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.12);
-    }
-
-    .form {
-      display: grid;
-      gap: 15px;
-      margin-top: 24px;
-    }
-
-    label {
-      display: grid;
-      gap: 7px;
-      font-size: 13px;
-      color: #344054;
-      font-weight: 750;
-    }
-
-    input, textarea {
-      width: 100%;
-      border: 1px solid #cbd5e1;
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.96);
-      color: var(--ink);
-      padding: 12px 13px;
-      outline: none;
-      transition: border-color 150ms ease, box-shadow 150ms ease, background 150ms ease;
-    }
-
-    textarea {
-      min-height: 96px;
-      resize: vertical;
-    }
-
-    input:focus, textarea:focus {
-      border-color: var(--blue);
-      box-shadow: 0 0 0 4px rgba(15, 98, 254, 0.12);
-      background: #fff;
-    }
-
-    .helper {
-      margin-top: 16px;
-      font-size: 13px;
-    }
-
-    .dashboard-head {
-      display: flex;
-      align-items: flex-end;
-      justify-content: space-between;
-      gap: 18px;
-      margin-bottom: 18px;
-    }
-
-    .dashboard-title {
-      display: grid;
-      gap: 8px;
-    }
-
-    .mini-actions {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .status-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
-      margin-bottom: 18px;
-    }
-
-    .status-card {
-      position: relative;
-      overflow: hidden;
-      display: flex;
-      justify-content: space-between;
-      gap: 16px;
-      align-items: center;
-    }
-
-    .status-card::before {
-      content: "";
-      position: absolute;
-      inset: 0 auto 0 0;
-      width: 4px;
-      background: var(--blue);
-    }
-
-    .status-card:nth-child(2)::before { background: var(--violet); }
-
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 7px;
-      min-width: 104px;
-      min-height: 30px;
-      padding: 0 12px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 850;
-      white-space: nowrap;
-    }
-
-    .badge::before {
-      content: "";
-      width: 8px;
-      height: 8px;
-      border-radius: 999px;
-      background: currentColor;
-    }
-
-    .ok { background: #e8f7ef; color: var(--green); }
-    .missing { background: #fff4df; color: var(--amber); }
-
-    .workspace-grid {
-      display: grid;
-      grid-template-columns: 330px minmax(0, 1fr);
-      gap: 18px;
-      align-items: start;
-    }
-
-    .profile-panel {
-      display: grid;
-      gap: 18px;
-    }
-
-    .avatar-row {
-      display: flex;
-      align-items: center;
-      gap: 13px;
-    }
-
-    .avatar {
-      width: 52px;
-      height: 52px;
-      display: grid;
-      place-items: center;
-      border-radius: 8px;
-      background: #16233f;
-      color: #fff;
-      font-weight: 900;
-      box-shadow: inset 0 -10px 20px rgba(255, 255, 255, 0.08);
-    }
-
-    .metric-stack {
-      display: grid;
-      gap: 10px;
-    }
-
-    .metric {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 12px;
-      border-radius: 8px;
-      background: #f8fafc;
-      border: 1px solid #e1e7f0;
-    }
-
-    .metric span { color: var(--muted); font-size: 13px; }
-    .metric strong { font-size: 13px; }
-
-    .settings-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 2px;
-    }
-
-    .agent-panel {
-      padding: 0;
-      overflow: hidden;
-    }
-
-    .agent-head {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      padding: 18px 20px;
-      border-bottom: 1px solid rgba(216, 222, 233, 0.92);
-      background: rgba(255, 255, 255, 0.66);
-    }
-
-    .agent-state {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      color: var(--teal);
-      font-size: 13px;
-      font-weight: 850;
-    }
-
-    .agent-state::before {
-      content: "";
-      width: 9px;
-      height: 9px;
-      border-radius: 999px;
-      background: var(--teal);
-      box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.12);
-    }
-
-    .messages {
-      height: 408px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      padding: 18px;
-      background:
-        linear-gradient(90deg, rgba(17, 24, 39, 0.035) 1px, transparent 1px),
-        linear-gradient(0deg, rgba(17, 24, 39, 0.025) 1px, transparent 1px),
-        #fbfcff;
-      background-size: 28px 28px, 28px 28px, auto;
-    }
-
-    .msg {
-      max-width: 82%;
-      padding: 12px 14px;
-      border-radius: 8px;
-      line-height: 1.5;
-      font-size: 14px;
-      white-space: pre-wrap;
-      box-shadow: 0 8px 20px rgba(17, 24, 39, 0.07);
-    }
-
-    .msg.user {
-      align-self: flex-end;
-      color: #fff;
-      background: linear-gradient(135deg, var(--blue), #1d8b84);
-    }
-
-    .msg.agent {
-      align-self: flex-start;
-      background: #fff;
-      border: 1px solid #dfe6f2;
-    }
-
-    .msg.error {
-      align-self: flex-start;
-      background: #fff2f0;
-      border: 1px solid #ffc9c3;
-      color: var(--red);
-    }
-
-    .tool-log {
-      margin-top: 9px;
-      padding-top: 9px;
-      border-top: 1px solid rgba(223, 230, 242, 0.8);
-      color: #66758f;
-      font-size: 12px;
-    }
-
-    .composer {
-      padding: 16px;
-      border-top: 1px solid rgba(216, 222, 233, 0.92);
-      background: #fff;
-    }
-
-    .chat-row {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 10px;
-      align-items: stretch;
-    }
-
-    .notice {
-      margin-bottom: 16px;
-      border: 1px solid #b9d7ff;
-      background: #eef6ff;
-      color: #123b76;
-      padding: 12px 14px;
-      border-radius: 8px;
-      font-weight: 700;
-    }
-
-    .settings-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) 360px;
-      gap: 18px;
-      align-items: start;
-    }
-
-    .settings-panel h1 { margin-bottom: 8px; }
-
-    .error-text {
-      color: var(--red);
-      font-size: 13px;
-      min-height: 20px;
-      margin-top: 8px;
-      font-weight: 650;
-    }
-
-    [hidden] { display: none !important; }
-
-    @media (max-width: 920px) {
-      .auth-stage, .workspace-grid, .settings-grid, .status-grid { grid-template-columns: 1fr; }
-      .auth-copy { min-height: 420px; }
-      .auth-copy h1 { margin-top: 42px; font-size: 38px; }
-      .dashboard-head { align-items: flex-start; flex-direction: column; }
-    }
-
-    @media (max-width: 640px) {
-      .topbar {
-        padding: 12px 16px;
-        align-items: flex-start;
-        flex-direction: column;
-      }
-      .shell { width: min(100% - 28px, 1180px); padding-top: 18px; }
-      .auth-wrap { padding: 18px 14px; }
-      .auth-copy { display: none; }
-      .auth-panel { padding: 24px; }
-      .signal-row, .chat-row { grid-template-columns: 1fr; }
-      .msg { max-width: 100%; }
-      h1 { font-size: 28px; }
-    }
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zira — Jira AI Agent</title>
+  <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
+
+  <!-- ════════════════════════════════════════
+       TOPBAR
+  ════════════════════════════════════════ -->
   <header class="topbar">
-    <div class="brand"><span class="brand-mark">AI</span><span>Jira AI Agent</span></div>
-    <nav class="nav" id="app-nav" hidden>
-      <button id="nav-dashboard" onclick="showView('dashboard')">Dashboard</button>
-      <button id="nav-settings" onclick="showView('settings')">Settings</button>
-      <button onclick="logout()">Logout</button>
+    <div class="brand">
+      <div class="brand-logo">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+          <path d="M2 17l10 5 10-5"/>
+          <path d="M2 12l10 5 10-5"/>
+        </svg>
+      </div>
+      <span>Zira</span>
+    </div>
+
+    <nav class="topbar-nav" id="app-nav" hidden>
+      <button class="nav-link" id="nav-dashboard" onclick="showView('dashboard')">Dashboard</button>
+      <button class="nav-link" id="nav-settings" onclick="showView('settings')">Settings</button>
+      <div class="nav-divider"></div>
+      <button class="nav-logout" onclick="logout()">Log out</button>
     </nav>
   </header>
 
   <main>
+
+    <!-- ════════════════════════════════════════
+         AUTH VIEW
+    ════════════════════════════════════════ -->
     <section id="auth-view" class="auth-wrap">
       <div class="auth-stage">
-        <aside class="auth-copy">
-          <div class="brand"><span class="brand-mark">AI</span><span>Jira AI Agent</span></div>
-          <h1>Turn Jira into a command center.</h1>
-          <p>Private credentials, connected workflows, and a calm interface built for getting tickets handled.</p>
-          <div class="system-card">
-            <h3>Workspace Status</h3>
-            <div class="signal-row">
-              <div class="signal"><strong>JWT</strong><span>Auth ready</span></div>
-              <div class="signal"><strong>3LO</strong><span>Jira OAuth</span></div>
-              <div class="signal"><strong>Fernet</strong><span>Encrypted keys</span></div>
+
+        <!-- Left: Narrative panel -->
+        <aside class="auth-left">
+          <div class="auth-headline">
+            <div class="auth-eyebrow">
+              <span class="auth-eyebrow-dot"></span>
+              Jira Automation Platform
+            </div>
+            <h1 class="auth-h1">Your Jira,<br>finally <em>fluent.</em></h1>
+            <p class="auth-sub">
+              Talk to your projects in plain English. Zira reads, creates,
+              and updates Jira tickets so you don't have to navigate menus.
+            </p>
+          </div>
+
+          <div class="auth-cards">
+            <div class="auth-card">
+              <div class="auth-card-label">Auth</div>
+              <div class="auth-card-value">JWT</div>
+              <div class="auth-card-desc">Session tokens</div>
+            </div>
+            <div class="auth-card">
+              <div class="auth-card-label">OAuth</div>
+              <div class="auth-card-value">3LO</div>
+              <div class="auth-card-desc">Jira connect</div>
+            </div>
+            <div class="auth-card">
+              <div class="auth-card-label">Storage</div>
+              <div class="auth-card-value">AES</div>
+              <div class="auth-card-desc">Encrypted keys</div>
             </div>
           </div>
         </aside>
 
-        <div class="panel auth-panel">
-          <span class="eyebrow">Secure workspace</span>
-          <h1 id="auth-title">Login</h1>
-          <p>Sign in to your agent console.</p>
+        <!-- Right: Form panel -->
+        <div class="auth-right">
+          <span class="auth-form-eyebrow">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            Secure workspace
+          </span>
 
+          <h2 class="auth-form-title" id="auth-title">Welcome back</h2>
+          <p class="auth-form-sub" id="auth-subtitle">Sign in to your agent console.</p>
+
+          <!-- Login form -->
           <form class="form" id="login-form" onsubmit="login(event)">
-            <label>Email<input id="login-email" type="email" autocomplete="email" required></label>
-            <label>Password<input id="login-password" type="password" autocomplete="current-password" required></label>
-            <button class="primary" type="submit">Login</button>
+            <div class="field">
+              <label class="field-label" for="login-email">Email address</label>
+              <input class="field-input" id="login-email" type="email" autocomplete="email" placeholder="you@company.com" required />
+            </div>
+            <div class="field">
+              <label class="field-label" for="login-password">Password</label>
+              <input class="field-input" id="login-password" type="password" autocomplete="current-password" placeholder="••••••••" required />
+            </div>
+            <button class="btn btn-primary btn-full" type="submit" style="margin-top:4px">Sign in</button>
           </form>
 
+          <!-- Register form -->
           <form class="form" id="register-form" onsubmit="register(event)" hidden>
-            <label>Name<input id="register-name" autocomplete="name" required></label>
-            <label>Email<input id="register-email" type="email" autocomplete="email" required></label>
-            <label>Password<input id="register-password" type="password" autocomplete="new-password" minlength="8" required></label>
-            <button class="primary" type="submit">Create Account</button>
+            <div class="field">
+              <label class="field-label" for="register-name">Full name</label>
+              <input class="field-input" id="register-name" autocomplete="name" placeholder="Alex Johnson" required />
+            </div>
+            <div class="field">
+              <label class="field-label" for="register-email">Email address</label>
+              <input class="field-input" id="register-email" type="email" autocomplete="email" placeholder="you@company.com" required />
+            </div>
+            <div class="field">
+              <label class="field-label" for="register-password">Password</label>
+              <input class="field-input" id="register-password" type="password" autocomplete="new-password" placeholder="Min. 8 characters" minlength="8" required />
+            </div>
+            <button class="btn btn-primary btn-full" type="submit" style="margin-top:4px">Create account</button>
           </form>
 
-          <div class="error-text" id="auth-error"></div>
-          <p class="helper">
-            <button class="link-btn" id="auth-toggle" onclick="toggleAuthMode()">Create an account</button>
-          </p>
+          <div class="error-msg" id="auth-error"></div>
+
+          <div class="helper-row">
+            <span id="auth-toggle-text">Don't have an account?</span>
+            <button class="link-btn" id="auth-toggle" onclick="toggleAuthMode()">Create one</button>
+          </div>
         </div>
+
       </div>
     </section>
 
+
+    <!-- ════════════════════════════════════════
+         DASHBOARD VIEW
+    ════════════════════════════════════════ -->
     <section id="dashboard-view" class="shell" hidden>
-      <div id="query-notice" class="notice" hidden></div>
 
-      <div class="dashboard-head">
-        <div class="dashboard-title">
-          <h1 id="dashboard-heading">Agent Dashboard</h1>
-          <p id="dashboard-subtitle">Your workspace is loading.</p>
+      <!-- Jira connected notice -->
+      <div id="query-notice" class="notice-banner" hidden>
+        <svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+        <span id="query-notice-text"></span>
+      </div>
+
+      <!-- Page header -->
+      <div class="page-head">
+        <div class="page-title-group">
+          <h1 class="page-title" id="dashboard-heading">Dashboard</h1>
+          <p class="page-subtitle" id="dashboard-subtitle">Loading your workspace…</p>
         </div>
-        <div class="mini-actions">
-          <button class="secondary" onclick="showView('settings')">Settings</button>
-          <button class="primary" onclick="connectJira()">Connect Jira</button>
+        <div class="page-actions">
+          <button class="btn btn-secondary btn-sm" onclick="showView('settings')">Settings</button>
+          <button class="btn btn-primary btn-sm" onclick="connectJira()">Connect Jira</button>
         </div>
       </div>
 
-      <div class="status-grid">
-        <div class="card status-card">
-          <div>
-            <h2>Jira Connection</h2>
-            <p>Atlassian OAuth 2.0</p>
+      <!-- Status cards -->
+      <div class="status-row">
+        <div class="status-card">
+          <div class="status-card-info">
+            <span class="status-card-label">Jira Connection</span>
+            <span class="status-card-desc">Atlassian OAuth 2.0</span>
           </div>
-          <span id="jira-status" class="badge missing">Missing</span>
+          <span id="jira-status" class="badge badge-idle">Not connected</span>
         </div>
-        <div class="card status-card">
-          <div>
-            <h2>Gemini Key</h2>
-            <p>Encrypted credential vault</p>
+        <div class="status-card">
+          <div class="status-card-info">
+            <span class="status-card-label">Gemini API Key</span>
+            <span class="status-card-desc">Encrypted credential vault</span>
           </div>
-          <span id="gemini-status" class="badge missing">Missing</span>
+          <span id="gemini-status" class="badge badge-idle">Not configured</span>
         </div>
       </div>
 
+      <!-- Workspace: sidebar + chat -->
       <div class="workspace-grid">
-        <aside class="panel profile-panel">
-          <div class="avatar-row">
-            <div class="avatar" id="user-avatar">JA</div>
+
+        <!-- Sidebar -->
+        <aside class="sidebar-card">
+          <div class="user-profile">
+            <div class="avatar" id="user-avatar">ZA</div>
             <div>
-              <h2 id="welcome-title">Dashboard</h2>
-              <p id="welcome-copy">Connect Jira and add a Gemini key to start running Jira automations.</p>
+              <div class="user-name" id="welcome-title">Your account</div>
+              <div class="user-email" id="welcome-copy">—</div>
             </div>
           </div>
 
-          <div class="metric-stack">
-            <div class="metric"><span>Jira</span><strong id="metric-jira">Pending</strong></div>
-            <div class="metric"><span>Gemini</span><strong id="metric-gemini">Pending</strong></div>
-            <div class="metric"><span>Session</span><strong>Active</strong></div>
+          <div class="metrics">
+            <div class="metric-row">
+              <span class="metric-label">Jira</span>
+              <span class="metric-value" id="metric-jira">Pending</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-label">Gemini</span>
+              <span class="metric-value" id="metric-gemini">Pending</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-label">Session</span>
+              <span class="metric-value" style="color:var(--green)">Active</span>
+            </div>
           </div>
 
-          <div class="settings-actions">
-            <button class="primary" onclick="connectJira()">Connect Jira</button>
-            <button class="secondary" onclick="showView('settings')">Settings</button>
+          <div class="sidebar-actions">
+            <button class="btn btn-primary btn-full btn-sm" onclick="connectJira()">Connect Jira</button>
+            <button class="btn btn-secondary btn-full btn-sm" onclick="showView('settings')">Manage settings</button>
           </div>
         </aside>
 
-        <section class="panel agent-panel">
-          <div class="agent-head">
-            <div>
-              <h2>Agent</h2>
-              <p>Natural language Jira operations</p>
+        <!-- Agent chat -->
+        <section class="chat-card">
+          <div class="chat-header">
+            <div class="chat-header-info">
+              <div class="chat-header-title">AI Agent</div>
+              <div class="chat-header-sub">Natural language Jira operations</div>
             </div>
-            <span class="agent-state">Online</span>
+            <div class="agent-status">
+              <span class="agent-status-dot"></span>
+              Online
+            </div>
           </div>
-          <div class="messages" id="messages"></div>
-          <div class="composer">
-            <div class="chat-row">
-              <textarea id="prompt-input" placeholder='Try "Show open issues assigned to me"'></textarea>
-              <button class="primary" id="send-btn" onclick="sendPrompt()">Send</button>
+
+          <div class="messages-pane" id="messages">
+            <!-- Empty state shown until first message -->
+            <div class="messages-empty" id="messages-empty">
+              <div class="messages-empty-icon">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+              </div>
+              <div class="messages-empty-title">Start a conversation</div>
+              <div class="messages-empty-sub">Ask anything about your Jira projects, issues, or team.</div>
             </div>
-            <div class="error-text" id="chat-error"></div>
+          </div>
+
+          <div class="chat-composer">
+            <!-- Suggestion chips -->
+            <div class="suggestions" id="suggestions">
+              <button class="suggestion-chip" onclick="fillPrompt(this)">Show open issues assigned to me</button>
+              <button class="suggestion-chip" onclick="fillPrompt(this)">Create a bug report</button>
+              <button class="suggestion-chip" onclick="fillPrompt(this)">Summarize recent activity</button>
+            </div>
+
+            <div class="composer-row">
+              <textarea
+                id="prompt-input"
+                class="composer-input"
+                placeholder='Ask something like "Show my open tasks" or "Create a story…"'
+                rows="1"
+                onkeydown="handleComposerKey(event)"
+                oninput="autoResize(this)"
+              ></textarea>
+              <button class="composer-send" id="send-btn" onclick="sendPrompt()" title="Send (Enter)">
+                <svg viewBox="0 0 24 24">
+                  <line x1="22" y1="2" x2="11" y2="13"/>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                </svg>
+              </button>
+            </div>
+            <div class="chat-error" id="chat-error"></div>
           </div>
         </section>
+
       </div>
     </section>
 
+
+    <!-- ════════════════════════════════════════
+         SETTINGS VIEW
+    ════════════════════════════════════════ -->
     <section id="settings-view" class="shell" hidden>
-      <div class="dashboard-head">
-        <div class="dashboard-title">
-          <h1>Settings</h1>
-          <p>Manage account-scoped credentials.</p>
+
+      <div class="page-head">
+        <div class="page-title-group">
+          <h1 class="page-title">Settings</h1>
+          <p class="page-subtitle">Manage your credentials and integrations.</p>
         </div>
-        <div class="mini-actions">
-          <button class="secondary" onclick="showView('dashboard')">Dashboard</button>
+        <div class="page-actions">
+          <button class="btn btn-secondary btn-sm" onclick="showView('dashboard')">← Back to Dashboard</button>
         </div>
       </div>
 
       <div class="settings-grid">
-        <section class="panel settings-panel">
-          <span class="eyebrow">Gemini</span>
-          <h1>API Key</h1>
-          <p>The key is encrypted before it is stored.</p>
-          <form class="form" onsubmit="saveGeminiKey(event)">
-            <label>Gemini API Key<input id="gemini-key" type="password" autocomplete="off" required></label>
-            <button class="primary" type="submit">Save Key</button>
-          </form>
-          <div class="error-text" id="settings-error"></div>
-        </section>
 
-        <aside class="panel profile-panel">
-          <span class="eyebrow">Atlassian</span>
-          <div>
-            <h2>Jira</h2>
-            <p id="settings-jira-copy">Connect Jira with Atlassian OAuth 2.0.</p>
+        <!-- Gemini key section -->
+        <div class="settings-section">
+          <div class="section-head">
+            <div class="section-icon section-icon-indigo">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+            </div>
+            <div class="section-info">
+              <div class="section-title">Gemini API Key</div>
+              <div class="section-desc">Encrypted before storing — never stored in plain text</div>
+            </div>
           </div>
-          <div class="metric-stack">
-            <div class="metric"><span>Status</span><strong id="settings-jira-status">Pending</strong></div>
-            <div class="metric"><span>Token storage</span><strong>Encrypted</strong></div>
+          <div class="section-body">
+            <p style="font-size:14px;color:var(--ink-3);margin-bottom:20px;line-height:1.6;">
+              Your Gemini key powers the AI agent. Get one from
+              <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:underline;">Google AI Studio</a>.
+              It's encrypted with Fernet before being written to the database.
+            </p>
+            <form class="form" onsubmit="saveGeminiKey(event)">
+              <div class="field">
+                <label class="field-label" for="gemini-key">API Key</label>
+                <input class="field-input" id="gemini-key" type="password" autocomplete="off" placeholder="AIza…" required />
+              </div>
+              <div>
+                <button class="btn btn-primary" type="submit">Save key</button>
+              </div>
+            </form>
+            <div class="error-msg" id="settings-error"></div>
           </div>
-          <div class="settings-actions">
-            <button class="primary" onclick="connectJira()">Connect Jira</button>
-            <button class="danger" onclick="disconnectJira()">Disconnect Jira</button>
+        </div>
+
+        <!-- Jira connection section -->
+        <div class="settings-section">
+          <div class="section-head">
+            <div class="section-icon section-icon-teal">
+              <svg viewBox="0 0 24 24"><path d="M10.5 2h3M12 2v4M4.93 4.93l2.12 2.12M4 12H2M4.93 19.07l2.12-2.12M12 20v2M19.07 19.07l-2.12-2.12M22 12h-2M19.07 4.93l-2.12 2.12"/></svg>
+            </div>
+            <div class="section-info">
+              <div class="section-title">Jira Integration</div>
+              <div class="section-desc">Atlassian OAuth 2.0 · three-legged flow</div>
+            </div>
           </div>
-        </aside>
+          <div class="section-body">
+            <div class="jira-status-list">
+              <div class="jira-status-row">
+                <span class="jira-status-key">Status</span>
+                <span class="jira-status-val" id="settings-jira-status">Not connected</span>
+              </div>
+              <div class="jira-status-row">
+                <span class="jira-status-key">Token storage</span>
+                <span class="jira-status-val">Encrypted (Fernet)</span>
+              </div>
+            </div>
+            <p class="section-desc" id="settings-jira-copy" style="font-size:13px;margin-bottom:16px;">
+              Connect your Jira account with Atlassian OAuth 2.0. Tokens are encrypted at rest.
+            </p>
+            <div class="settings-actions">
+              <button class="btn btn-primary btn-sm" onclick="connectJira()">Connect Jira</button>
+              <button class="btn btn-danger btn-sm" onclick="disconnectJira()">Disconnect</button>
+            </div>
+          </div>
+        </div>
+
       </div>
     </section>
+
   </main>
 
+
+  <!-- ════════════════════════════════════════
+       JAVASCRIPT — no backend changes
+  ════════════════════════════════════════ -->
   <script>
     const TOKEN_KEY = 'jira_agent_token';
     let currentUser = null;
     let authMode = 'login';
 
-    function token() { return localStorage.getItem(TOKEN_KEY); }
+    /* ── Token helpers ──────────────────────── */
+    function token()       { return localStorage.getItem(TOKEN_KEY); }
+    function setToken(t)   { localStorage.setItem(TOKEN_KEY, t); }
+    function clearToken()  { localStorage.removeItem(TOKEN_KEY); }
 
     function authHeaders(extra = {}) {
       return { ...extra, Authorization: `Bearer ${token()}` };
     }
 
+    /* ── API wrapper ────────────────────────── */
     async function api(path, options = {}) {
       const headers = options.auth === false
         ? { 'Content-Type': 'application/json', ...(options.headers || {}) }
@@ -755,43 +372,38 @@
       return data;
     }
 
-    function setAuthError(message) { document.getElementById('auth-error').textContent = message || ''; }
-    function setSettingsError(message) { document.getElementById('settings-error').textContent = message || ''; }
-    function setChatError(message) { document.getElementById('chat-error').textContent = message || ''; }
+    /* ── Error setters ─────────────────────── */
+    function setAuthError(m)     { document.getElementById('auth-error').textContent = m || ''; }
+    function setSettingsError(m) { document.getElementById('settings-error').textContent = m || ''; }
+    function setChatError(m)     { document.getElementById('chat-error').textContent = m || ''; }
 
+    /* ── Initials ───────────────────────────── */
     function initials(name) {
-      return (name || 'JA')
-        .split(/\s+/)
-        .filter(Boolean)
-        .slice(0, 2)
-        .map(part => part[0].toUpperCase())
-        .join('') || 'JA';
+      return (name || 'ZA')
+        .split(/\s+/).filter(Boolean).slice(0, 2)
+        .map(p => p[0].toUpperCase()).join('') || 'ZA';
     }
 
-    function setToken(accessToken) {
-      localStorage.setItem(TOKEN_KEY, accessToken);
-    }
-
-    function clearToken() {
-      localStorage.removeItem(TOKEN_KEY);
-    }
-
+    /* ── Auth mode toggle ───────────────────── */
     function toggleAuthMode() {
       authMode = authMode === 'login' ? 'register' : 'login';
-      document.getElementById('login-form').hidden = authMode !== 'login';
-      document.getElementById('register-form').hidden = authMode !== 'register';
-      document.getElementById('auth-title').textContent = authMode === 'login' ? 'Login' : 'Register';
-      document.getElementById('auth-toggle').textContent = authMode === 'login' ? 'Create an account' : 'Use existing account';
+      const isLogin = authMode === 'login';
+      document.getElementById('login-form').hidden    = !isLogin;
+      document.getElementById('register-form').hidden = isLogin;
+      document.getElementById('auth-title').textContent    = isLogin ? 'Welcome back' : 'Create account';
+      document.getElementById('auth-subtitle').textContent = isLogin ? 'Sign in to your agent console.' : 'Set up your Zira workspace.';
+      document.getElementById('auth-toggle-text').textContent = isLogin ? "Don't have an account?" : 'Already have an account?';
+      document.getElementById('auth-toggle').textContent = isLogin ? 'Create one' : 'Sign in';
       setAuthError('');
     }
 
+    /* ── Login ──────────────────────────────── */
     async function login(event) {
       event.preventDefault();
       setAuthError('');
       try {
         const data = await api('/auth/login', {
-          method: 'POST',
-          auth: false,
+          method: 'POST', auth: false,
           body: JSON.stringify({
             email: document.getElementById('login-email').value,
             password: document.getElementById('login-password').value,
@@ -799,18 +411,16 @@
         });
         setToken(data.access_token);
         await loadUser();
-      } catch (error) {
-        setAuthError(error.message);
-      }
+      } catch (err) { setAuthError(err.message); }
     }
 
+    /* ── Register ───────────────────────────── */
     async function register(event) {
       event.preventDefault();
       setAuthError('');
       try {
         const data = await api('/auth/register', {
-          method: 'POST',
-          auth: false,
+          method: 'POST', auth: false,
           body: JSON.stringify({
             name: document.getElementById('register-name').value,
             email: document.getElementById('register-email').value,
@@ -819,11 +429,10 @@
         });
         setToken(data.access_token);
         await loadUser();
-      } catch (error) {
-        setAuthError(error.message);
-      }
+      } catch (err) { setAuthError(err.message); }
     }
 
+    /* ── Logout ─────────────────────────────── */
     async function logout() {
       try {
         if (token()) await api('/auth/logout', { method: 'POST' });
@@ -834,6 +443,7 @@
       }
     }
 
+    /* ── Load user ──────────────────────────── */
     async function loadUser() {
       if (!token()) return showAuth();
       try {
@@ -846,53 +456,67 @@
       }
     }
 
+    /* ── Render user data ───────────────────── */
     function renderUser() {
-      const jira = currentUser.jira_connected;
+      const jira   = currentUser.jira_connected;
       const gemini = currentUser.gemini_key_configured;
-      document.getElementById('jira-status').textContent = jira ? 'Connected' : 'Missing';
-      document.getElementById('jira-status').className = `badge ${jira ? 'ok' : 'missing'}`;
-      document.getElementById('gemini-status').textContent = gemini ? 'Configured' : 'Missing';
-      document.getElementById('gemini-status').className = `badge ${gemini ? 'ok' : 'missing'}`;
+
+      // Status badges
+      const jiraEl = document.getElementById('jira-status');
+      jiraEl.textContent = jira ? 'Connected' : 'Not connected';
+      jiraEl.className   = `badge ${jira ? 'badge-ok' : 'badge-idle'}`;
+
+      const geminiEl = document.getElementById('gemini-status');
+      geminiEl.textContent = gemini ? 'Configured' : 'Not configured';
+      geminiEl.className   = `badge ${gemini ? 'badge-ok' : 'badge-warn'}`;
+
+      // Profile
       document.getElementById('welcome-title').textContent = currentUser.name;
-      document.getElementById('welcome-copy').textContent = currentUser.email;
-      document.getElementById('dashboard-heading').textContent = `Good to see you, ${currentUser.name}`;
+      document.getElementById('welcome-copy').textContent  = currentUser.email;
+      document.getElementById('user-avatar').textContent   = initials(currentUser.name);
+
+      // Page heading
+      document.getElementById('dashboard-heading').textContent = `Good to see you, ${currentUser.name.split(' ')[0]}`;
       document.getElementById('dashboard-subtitle').textContent = jira && gemini
-        ? 'Your agent is ready.'
-        : 'Finish setup to unlock the agent.';
-      document.getElementById('user-avatar').textContent = initials(currentUser.name);
-      document.getElementById('metric-jira').textContent = jira ? 'Connected' : 'Missing';
-      document.getElementById('metric-gemini').textContent = gemini ? 'Configured' : 'Missing';
-      document.getElementById('settings-jira-status').textContent = jira ? 'Connected' : 'Missing';
-      document.getElementById('settings-jira-copy').textContent = jira
-        ? 'Jira is connected for this account.'
-        : 'Connect Jira with Atlassian OAuth 2.0.';
+        ? 'Your agent is ready — ask anything below.'
+        : 'Finish setup to unlock the AI agent.';
+
+      // Metrics
+      document.getElementById('metric-jira').textContent   = jira   ? 'Connected'   : 'Pending';
+      document.getElementById('metric-gemini').textContent = gemini ? 'Configured' : 'Pending';
+
+      // Settings panel
+      document.getElementById('settings-jira-status').textContent = jira ? 'Connected' : 'Not connected';
+      document.getElementById('settings-jira-copy').textContent   = jira
+        ? 'Jira is connected for this account. You can disconnect at any time.'
+        : 'Connect your Jira account with Atlassian OAuth 2.0. Tokens are encrypted at rest.';
     }
 
+    /* ── Navigation ─────────────────────────── */
     function showAuth() {
-      document.getElementById('app-nav').hidden = true;
-      document.getElementById('auth-view').hidden = false;
-      document.getElementById('dashboard-view').hidden = true;
-      document.getElementById('settings-view').hidden = true;
+      document.getElementById('app-nav').hidden         = true;
+      document.getElementById('auth-view').hidden       = false;
+      document.getElementById('dashboard-view').hidden  = true;
+      document.getElementById('settings-view').hidden   = true;
     }
 
     function showView(view) {
       if (!currentUser) return showAuth();
-      document.getElementById('app-nav').hidden = false;
-      document.getElementById('auth-view').hidden = true;
-      document.getElementById('dashboard-view').hidden = view !== 'dashboard';
-      document.getElementById('settings-view').hidden = view !== 'settings';
+      document.getElementById('app-nav').hidden         = false;
+      document.getElementById('auth-view').hidden       = true;
+      document.getElementById('dashboard-view').hidden  = view !== 'dashboard';
+      document.getElementById('settings-view').hidden   = view !== 'settings';
       document.getElementById('nav-dashboard').classList.toggle('active', view === 'dashboard');
       document.getElementById('nav-settings').classList.toggle('active', view === 'settings');
       renderUser();
     }
 
+    /* ── Jira OAuth ─────────────────────────── */
     async function connectJira() {
       try {
         const data = await api('/jira/connect');
         window.location.href = data.authorization_url;
-      } catch (error) {
-        setSettingsError(error.message);
-      }
+      } catch (err) { setSettingsError(err.message); }
     }
 
     async function disconnectJira() {
@@ -901,11 +525,10 @@
         await api('/jira/disconnect', { method: 'DELETE' });
         await loadUser();
         showView('settings');
-      } catch (error) {
-        setSettingsError(error.message);
-      }
+      } catch (err) { setSettingsError(err.message); }
     }
 
+    /* ── Gemini key ─────────────────────────── */
     async function saveGeminiKey(event) {
       event.preventDefault();
       setSettingsError('');
@@ -916,60 +539,126 @@
         });
         document.getElementById('gemini-key').value = '';
         renderUser();
-      } catch (error) {
-        setSettingsError(error.message);
-      }
+      } catch (err) { setSettingsError(err.message); }
     }
 
-    function addMsg(role, text, tools) {
-      const box = document.getElementById('messages');
-      const div = document.createElement('div');
-      div.className = `msg ${role}`;
-      div.textContent = text;
-      if (tools && tools.length) {
-        const log = document.createElement('div');
-        log.className = 'tool-log';
-        log.textContent = `Tools: ${tools.map(item => item.tool).join(' -> ')}`;
-        div.appendChild(log);
-      }
-      box.appendChild(div);
-      box.scrollTop = box.scrollHeight;
-    }
-
-    async function sendPrompt() {
+    /* ── Chat helpers ───────────────────────── */
+    function fillPrompt(btn) {
       const input = document.getElementById('prompt-input');
+      input.value = btn.textContent.trim();
+      input.focus();
+      autoResize(input);
+      // Hide chips after use
+      document.getElementById('suggestions').style.display = 'none';
+    }
+
+    function handleComposerKey(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendPrompt();
+      }
+    }
+
+    function autoResize(el) {
+      el.style.height = 'auto';
+      el.style.height = Math.min(el.scrollHeight, 140) + 'px';
+    }
+
+    /* ── Add message bubble ─────────────────── */
+    function addMsg(role, text, tools) {
+      const pane = document.getElementById('messages');
+
+      // Remove empty state on first message
+      const empty = document.getElementById('messages-empty');
+      if (empty) empty.remove();
+
+      const wrapper = document.createElement('div');
+      wrapper.className = `msg ${role}`;
+
+      const inner = document.createElement('div');
+      inner.className = 'msg-inner';
+      inner.textContent = text;
+
+      if (tools && tools.length) {
+        const toolsEl = document.createElement('div');
+        toolsEl.className = 'msg-tools';
+        toolsEl.innerHTML = `<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+          ${tools.map(t => t.tool).join(' → ')}`;
+        inner.appendChild(toolsEl);
+      }
+
+      wrapper.appendChild(inner);
+      pane.appendChild(wrapper);
+      pane.scrollTop = pane.scrollHeight;
+      return wrapper;
+    }
+
+    function addTypingIndicator() {
+      const pane = document.getElementById('messages');
+      const wrapper = document.createElement('div');
+      wrapper.className = 'msg agent msg-typing';
+      wrapper.id = 'typing-indicator';
+      wrapper.innerHTML = `<div class="msg-inner">
+        <span class="typing-dot"></span>
+        <span class="typing-dot"></span>
+        <span class="typing-dot"></span>
+      </div>`;
+      pane.appendChild(wrapper);
+      pane.scrollTop = pane.scrollHeight;
+    }
+
+    function removeTypingIndicator() {
+      const el = document.getElementById('typing-indicator');
+      if (el) el.remove();
+    }
+
+    /* ── Send prompt ────────────────────────── */
+    async function sendPrompt() {
+      const input  = document.getElementById('prompt-input');
       const prompt = input.value.trim();
       if (!prompt) return;
+
       setChatError('');
       addMsg('user', prompt);
       input.value = '';
-      const button = document.getElementById('send-btn');
-      button.disabled = true;
+      input.style.height = 'auto';
+
+      // Hide suggestions after first real send
+      document.getElementById('suggestions').style.display = 'none';
+
+      const btn = document.getElementById('send-btn');
+      btn.disabled = true;
+      addTypingIndicator();
+
       try {
         const data = await api('/agent/chat', {
           method: 'POST',
           body: JSON.stringify({ prompt }),
         });
+        removeTypingIndicator();
         addMsg('agent', data.response, data.tool_calls);
-      } catch (error) {
-        addMsg('error', error.message);
-        setChatError(error.message);
+      } catch (err) {
+        removeTypingIndicator();
+        addMsg('error', err.message);
+        setChatError(err.message);
       } finally {
-        button.disabled = false;
+        btn.disabled = false;
         input.focus();
       }
     }
 
+    /* ── Jira OAuth redirect notice ─────────── */
     function showQueryNotice() {
       const params = new URLSearchParams(window.location.search);
       const notice = document.getElementById('query-notice');
       if (params.get('jira') === 'connected') {
-        notice.textContent = 'Jira connected successfully.';
+        document.getElementById('query-notice-text').textContent = '✓ Jira connected successfully.';
         notice.hidden = false;
         history.replaceState({}, '', '/');
       }
     }
 
+    /* ── Bootstrap ──────────────────────────── */
     loadUser().then(showQueryNotice);
   </script>
 </body>
