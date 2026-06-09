@@ -1,4 +1,5 @@
 from functools import lru_cache
+from urllib.parse import urlparse, parse_qsl, urlencode, urlunparse
 
 from pydantic import Field
 from pydantic_settings import BaseSettings
@@ -20,37 +21,37 @@ class Settings(BaseSettings):
 
     gemini_model: str = Field(
         default="gemini-2.5-flash",
-        env="GEMINI_MODEL",
+        env="GEMINI_MODEL"
     )
 
     app_env: str = Field(
         default="development",
-        env="APP_ENV",
+        env="APP_ENV"
     )
 
     frontend_url: str = Field(
         default="http://127.0.0.1:8000",
-        env="FRONTEND_URL",
+        env="FRONTEND_URL"
     )
 
     cors_origins: str = Field(
         default="http://127.0.0.1:8000,http://localhost:8000",
-        env="CORS_ORIGINS",
+        env="CORS_ORIGINS"
     )
 
     rate_limit_requests: int = Field(
         default=120,
-        env="RATE_LIMIT_REQUESTS",
+        env="RATE_LIMIT_REQUESTS"
     )
 
     rate_limit_window_seconds: int = Field(
         default=60,
-        env="RATE_LIMIT_WINDOW_SECONDS",
+        env="RATE_LIMIT_WINDOW_SECONDS"
     )
 
     access_token_expire_minutes: int = Field(
         default=60 * 24,
-        env="ACCESS_TOKEN_EXPIRE_MINUTES",
+        env="ACCESS_TOKEN_EXPIRE_MINUTES"
     )
 
     oauth_scopes: str = (
@@ -60,26 +61,36 @@ class Settings(BaseSettings):
 
     @property
     def sqlalchemy_database_url(self) -> str:
-        url = self.database_url
+        url = self.database_url.strip()
 
+        # Render/Neon compatibility
         if url.startswith("postgres://"):
             url = url.replace(
                 "postgres://",
                 "postgresql+asyncpg://",
-                1,
+                1
             )
 
         elif url.startswith("postgresql://"):
             url = url.replace(
                 "postgresql://",
                 "postgresql+asyncpg://",
-                1,
+                1
             )
 
-        # Remove sslmode for asyncpg compatibility
-        url = url.replace("?sslmode=require", "")
+        parsed = urlparse(url)
 
-        return url
+        query_params = dict(parse_qsl(parsed.query))
+
+        # Remove params unsupported by asyncpg
+        query_params.pop("sslmode", None)
+        query_params.pop("channel_binding", None)
+
+        cleaned_url = urlunparse(
+            parsed._replace(query=urlencode(query_params))
+        )
+
+        return cleaned_url
 
     @property
     def cors_origin_list(self) -> list[str]:
