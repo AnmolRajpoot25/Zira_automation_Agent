@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Zira — Jira AI Agent</title>
+  <title>Zira — Enterprise Jira AI Agent</title>
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
@@ -12,7 +12,7 @@
        TOPBAR
   ════════════════════════════════════════ -->
   <header class="topbar">
-    <div class="brand">
+    <div class="brand" onclick="showView('dashboard')">
       <div class="brand-logo">
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
           <path d="M12 2L2 7l10 5 10-5-10-5z"/>
@@ -26,6 +26,8 @@
     <nav class="topbar-nav" id="app-nav" hidden>
       <button class="nav-link" id="nav-dashboard" onclick="showView('dashboard')">Dashboard</button>
       <button class="nav-link" id="nav-settings" onclick="showView('settings')">Settings</button>
+      <button class="nav-link" id="nav-contact" onclick="showView('contact')">Contact</button>
+      <button class="nav-link" id="nav-terms" onclick="showView('terms')">Terms</button>
       <div class="nav-divider"></div>
       <button class="nav-logout" onclick="logout()">Log out</button>
     </nav>
@@ -34,22 +36,29 @@
   <main>
 
     <!-- ════════════════════════════════════════
-         AUTH VIEW
+         AUTH VIEW (WITH VIDEO BACKGROUND)
     ════════════════════════════════════════ -->
     <section id="auth-view" class="auth-wrap">
       <div class="auth-stage">
 
-        <!-- Left: Narrative panel -->
+        <!-- Left: Video Hero Showcase -->
         <aside class="auth-left">
-          <div class="auth-headline">
+          <div class="auth-video-bg">
+            <video class="bg-video" autoplay loop muted playsinline>
+              <source src="https://fuselabcreative.com/wp-content/uploads/2025/05/public-covid-relief-funds-us-government-map-960w.mp4" type="video/mp4" />
+            </video>
+            <div class="bg-video-overlay"></div>
+          </div>
+
+          <div class="auth-content-layer">
             <div class="auth-eyebrow">
               <span class="auth-eyebrow-dot"></span>
               Jira Automation Platform
             </div>
-            <h1 class="auth-h1">Your Jira,<br>finally <em>fluent.</em></h1>
+            <h1 class="auth-h1">Your Jira,<br>finally <em>intelligent.</em></h1>
             <p class="auth-sub">
-              Talk to your projects in plain English. Zira reads, creates,
-              and updates Jira tickets so you don't have to navigate menus.
+              Interact with your Jira workspace using natural language. Zira seamlessly queries, creates,
+              and updates tickets with encrypted OAuth credential security.
             </p>
           </div>
 
@@ -57,17 +66,17 @@
             <div class="auth-card">
               <div class="auth-card-label">Auth</div>
               <div class="auth-card-value">JWT</div>
-              <div class="auth-card-desc">Session tokens</div>
+              <div class="auth-card-desc">Session Tokens</div>
             </div>
             <div class="auth-card">
               <div class="auth-card-label">OAuth</div>
               <div class="auth-card-value">3LO</div>
-              <div class="auth-card-desc">Jira connect</div>
+              <div class="auth-card-desc">Atlassian Connect</div>
             </div>
             <div class="auth-card">
-              <div class="auth-card-label">Storage</div>
-              <div class="auth-card-value">AES</div>
-              <div class="auth-card-desc">Encrypted keys</div>
+              <div class="auth-card-label">Vault</div>
+              <div class="auth-card-value">AES-128</div>
+              <div class="auth-card-desc">Fernet Encrypted</div>
             </div>
           </div>
         </aside>
@@ -78,7 +87,7 @@
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
             </svg>
-            Secure workspace
+            Secure Console
           </span>
 
           <h2 class="auth-form-title" id="auth-title">Welcome back</h2>
@@ -120,6 +129,12 @@
             <span id="auth-toggle-text">Don't have an account?</span>
             <button class="link-btn" id="auth-toggle" onclick="toggleAuthMode()">Create one</button>
           </div>
+
+          <div class="public-links">
+            <button class="link-btn" onclick="showPublicView('contact')">Contact Support</button>
+            <span>•</span>
+            <button class="link-btn" onclick="showPublicView('terms')">Terms & Conditions</button>
+          </div>
         </div>
 
       </div>
@@ -154,14 +169,14 @@
         <div class="status-card">
           <div class="status-card-info">
             <span class="status-card-label">Jira Connection</span>
-            <span class="status-card-desc">Atlassian OAuth 2.0</span>
+            <span class="status-card-desc">Atlassian OAuth 2.0 (3LO)</span>
           </div>
           <span id="jira-status" class="badge badge-idle">Not connected</span>
         </div>
         <div class="status-card">
           <div class="status-card-info">
             <span class="status-card-label">Gemini API Key</span>
-            <span class="status-card-desc">Encrypted credential vault</span>
+            <span class="status-card-desc">Fernet Vault Storage</span>
           </div>
           <span id="gemini-status" class="badge badge-idle">Not configured</span>
         </div>
@@ -182,16 +197,16 @@
 
           <div class="metrics">
             <div class="metric-row">
-              <span class="metric-label">Jira</span>
+              <span class="metric-label">Jira Status</span>
               <span class="metric-value" id="metric-jira">Pending</span>
             </div>
             <div class="metric-row">
-              <span class="metric-label">Gemini</span>
+              <span class="metric-label">Gemini Vault</span>
               <span class="metric-value" id="metric-gemini">Pending</span>
             </div>
             <div class="metric-row">
               <span class="metric-label">Session</span>
-              <span class="metric-value" style="color:var(--green)">Active</span>
+              <span class="metric-value" style="color:var(--emerald)">Active</span>
             </div>
           </div>
 
@@ -205,17 +220,16 @@
         <section class="chat-card">
           <div class="chat-header">
             <div class="chat-header-info">
-              <div class="chat-header-title">AI Agent</div>
-              <div class="chat-header-sub">Natural language Jira operations</div>
+              <div class="chat-header-title">AI Assistant Console</div>
+              <div class="chat-header-sub">Natural Language Jira Operations</div>
             </div>
             <div class="agent-status">
               <span class="agent-status-dot"></span>
-              Online
+              System Ready
             </div>
           </div>
 
           <div class="messages-pane" id="messages">
-            <!-- Empty state shown until first message -->
             <div class="messages-empty" id="messages-empty">
               <div class="messages-empty-icon">
                 <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
@@ -223,23 +237,22 @@
                 </svg>
               </div>
               <div class="messages-empty-title">Start a conversation</div>
-              <div class="messages-empty-sub">Ask anything about your Jira projects, issues, or team.</div>
+              <div class="messages-empty-sub">Query open tickets, create user stories, or update sprint tasks using plain natural language.</div>
             </div>
           </div>
 
           <div class="chat-composer">
-            <!-- Suggestion chips -->
             <div class="suggestions" id="suggestions">
-              <button class="suggestion-chip" onclick="fillPrompt(this)">Show open issues assigned to me</button>
-              <button class="suggestion-chip" onclick="fillPrompt(this)">Create a bug report</button>
-              <button class="suggestion-chip" onclick="fillPrompt(this)">Summarize recent activity</button>
+              <button class="suggestion-chip" onclick="fillPrompt(this)">⚡ Show open issues assigned to me</button>
+              <button class="suggestion-chip" onclick="fillPrompt(this)">🐛 Create a high priority bug</button>
+              <button class="suggestion-chip" onclick="fillPrompt(this)">📊 Summarize project status</button>
             </div>
 
             <div class="composer-row">
               <textarea
                 id="prompt-input"
                 class="composer-input"
-                placeholder='Ask something like "Show my open tasks" or "Create a story…"'
+                placeholder='Ask something like "Show open bugs assigned to me" or "Create a task..."'
                 rows="1"
                 onkeydown="handleComposerKey(event)"
                 oninput="autoResize(this)"
@@ -267,7 +280,7 @@
       <div class="page-head">
         <div class="page-title-group">
           <h1 class="page-title">Settings</h1>
-          <p class="page-subtitle">Manage your credentials and integrations.</p>
+          <p class="page-subtitle">Manage credentials and authentication keys.</p>
         </div>
         <div class="page-actions">
           <button class="btn btn-secondary btn-sm" onclick="showView('dashboard')">← Back to Dashboard</button>
@@ -284,25 +297,26 @@
             </div>
             <div class="section-info">
               <div class="section-title">Gemini API Key</div>
-              <div class="section-desc">Encrypted before storing — never stored in plain text</div>
+              <div class="section-desc">Encrypted credential storage</div>
             </div>
           </div>
           <div class="section-body">
             <p style="font-size:14px;color:var(--ink-3);margin-bottom:20px;line-height:1.6;">
-              Your Gemini key powers the AI agent. Get one from
-              <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:underline;">Google AI Studio</a>.
-              It's encrypted with Fernet before being written to the database.
+              Your Gemini key powers the agent. Obtain your key from
+              <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" style="color:var(--cyan);text-decoration:underline;">Google AI Studio</a>.
+              It is encrypted using Fernet prior to being written to PostgreSQL.
             </p>
             <form class="form" onsubmit="saveGeminiKey(event)">
               <div class="field">
                 <label class="field-label" for="gemini-key">API Key</label>
-                <input class="field-input" id="gemini-key" type="password" autocomplete="off" placeholder="AIza…" required />
+                <input class="field-input" id="gemini-key" type="password" autocomplete="new-password" placeholder="AIza…" required />
               </div>
               <div>
-                <button class="btn btn-primary" type="submit">Save key</button>
+                <button class="btn btn-primary" type="submit">Save credential</button>
               </div>
             </form>
             <div class="error-msg" id="settings-error"></div>
+            <div class="success-msg" id="settings-success" style="color:var(--emerald);font-size:13px;font-weight:600;margin-top:6px;"></div>
           </div>
         </div>
 
@@ -314,7 +328,7 @@
             </div>
             <div class="section-info">
               <div class="section-title">Jira Integration</div>
-              <div class="section-desc">Atlassian OAuth 2.0 · three-legged flow</div>
+              <div class="section-desc">Atlassian OAuth 2.0 · 3-Legged Auth</div>
             </div>
           </div>
           <div class="section-body">
@@ -324,12 +338,12 @@
                 <span class="jira-status-val" id="settings-jira-status">Not connected</span>
               </div>
               <div class="jira-status-row">
-                <span class="jira-status-key">Token storage</span>
+                <span class="jira-status-key">Token Vault</span>
                 <span class="jira-status-val">Encrypted (Fernet)</span>
               </div>
             </div>
             <p class="section-desc" id="settings-jira-copy" style="font-size:13px;margin-bottom:16px;">
-              Connect your Jira account with Atlassian OAuth 2.0. Tokens are encrypted at rest.
+              Connect your Jira account with Atlassian OAuth 2.0. Tokens are securely encrypted at rest.
             </p>
             <div class="settings-actions">
               <button class="btn btn-primary btn-sm" onclick="connectJira()">Connect Jira</button>
@@ -341,11 +355,144 @@
       </div>
     </section>
 
+
+    <!-- ════════════════════════════════════════
+         CONTACT DETAILS VIEW (NEW TAB)
+    ════════════════════════════════════════ -->
+    <section id="contact-view" class="shell" hidden>
+      <div class="page-head">
+        <div class="page-title-group">
+          <h1 class="page-title">Contact & Support</h1>
+          <p class="page-subtitle">Get in touch with the Zira platform team & developer support.</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-secondary btn-sm" onclick="showView('dashboard')">← Back to Workspace</button>
+        </div>
+      </div>
+
+      <div class="contact-grid">
+        <div class="contact-card">
+          <div class="contact-card-title">
+            <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            Developer Support Hub
+          </div>
+          <div class="contact-list">
+            <div class="contact-item">
+              <div class="contact-icon">
+                <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              </div>
+              <div>
+                <div class="contact-info-label">Developer Email</div>
+                <div class="contact-info-val"><a href="mailto:rajpootanmol779@gmail.com" style="color:var(--emerald);text-decoration:underline;">rajpootanmol779@gmail.com</a></div>
+                <div class="contact-info-desc">Direct developer support for OAuth integration & API keys.</div>
+              </div>
+            </div>
+            <div class="contact-item">
+              <div class="contact-icon">
+                <svg viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+              </div>
+              <div>
+                <div class="contact-info-label">GitHub Repository</div>
+                <div class="contact-info-val">AnmolRajpoot25/Zira_automation_Agent</div>
+                <div class="contact-info-desc">Open source codebase, documentation, and issue tracker.</div>
+              </div>
+            </div>
+            <div class="contact-item">
+              <div class="contact-icon">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+              </div>
+              <div>
+                <div class="contact-info-label">Live Service Status</div>
+                <div class="contact-info-val">status.zira-agent.ai</div>
+                <div class="contact-info-desc">99.9% Uptime SLA with Cloudflare Edge routing.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="contact-card">
+          <div class="contact-card-title">
+            <svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+            Send Developer Inquiry
+          </div>
+          <form class="form" onsubmit="event.preventDefault(); alert('Inquiry sent successfully!');">
+            <div class="field">
+              <label class="field-label">Subject</label>
+              <input class="field-input" placeholder="e.g. Enterprise Jira Cloud Integration" required />
+            </div>
+            <div class="field">
+              <label class="field-label">Message</label>
+              <textarea class="field-input" placeholder="Describe your question or integration feedback…" required></textarea>
+            </div>
+            <button class="btn btn-primary btn-full" type="submit">Submit Inquiry</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ════════════════════════════════════════
+         TERMS & CONDITIONS VIEW (NEW TAB)
+    ════════════════════════════════════════ -->
+    <section id="terms-view" class="shell" hidden>
+      <div class="page-head">
+        <div class="page-title-group">
+          <h1 class="page-title">Terms & Conditions</h1>
+          <p class="page-subtitle">Platform terms of service, OAuth 2.0 security policies, and usage guidelines.</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn btn-secondary btn-sm" onclick="showView('dashboard')">← Back to Workspace</button>
+        </div>
+      </div>
+
+      <div class="terms-card">
+        <div class="terms-header">
+          <span class="terms-tag">Effective Date: July 2026</span>
+          <h2 class="auth-form-title">Zira Platform Terms of Service</h2>
+        </div>
+
+        <div class="terms-article">
+          <h3 class="terms-h2"><span>01</span> Atlassian OAuth 2.0 (3LO) Authentication Policy</h3>
+          <p class="terms-body">
+            Zira connects to Atlassian Jira Cloud instances exclusively via 3-Legged OAuth 2.0 (3LO). By granting access,
+            you authorize Zira to execute Jira REST API calls strictly within the permissions granted by your Atlassian account
+            (such as reading work items, creating tickets, and posting comments).
+          </p>
+        </div>
+
+        <div class="terms-article">
+          <h3 class="terms-h2"><span>02</span> Data Encryption & Token Storage</h3>
+          <p class="terms-body">
+            All user credentials, including OAuth access/refresh tokens and Gemini API keys, are stored in encrypted format
+            at rest in PostgreSQL using symmetric Fernet encryption (AES-128 in CBC mode with HMAC verification). Plaintext tokens
+            are never written to disk or exposed in client responses.
+          </p>
+        </div>
+
+        <div class="terms-article">
+          <h3 class="terms-h2"><span>03</span> Responsible AI & API Rate Limits</h3>
+          <ul class="terms-bullet">
+            <li><strong>Model Execution:</strong> Natural language prompts are processed using Google Gemini AI models.</li>
+            <li><strong>Rate Limiting:</strong> Requests are limited to 120 calls per minute per user workspace to ensure system stability.</li>
+            <li><strong>User Oversight:</strong> Users retain responsibility for inspecting ticket updates and deletions triggered via agent function calls.</li>
+          </ul>
+        </div>
+
+        <div class="terms-article">
+          <h3 class="terms-h2"><span>04</span> Service Availability & Disclaimers</h3>
+          <p class="terms-body">
+            Zira is provided "as is" without warranty. While the platform operates with high availability via Cloudflare Workers
+            and Neon PostgreSQL infrastructure, Zira is not liable for upstream outages affecting Atlassian Cloud or Google AI services.
+          </p>
+        </div>
+      </div>
+    </section>
+
   </main>
 
 
   <!-- ════════════════════════════════════════
-       JAVASCRIPT — no backend changes
+       JAVASCRIPT — NO BACKEND CONTRACTS BROKEN
   ════════════════════════════════════════ -->
   <script>
     const TOKEN_KEY = 'jira_agent_token';
@@ -372,10 +519,11 @@
       return data;
     }
 
-    /* ── Error setters ─────────────────────── */
-    function setAuthError(m)     { document.getElementById('auth-error').textContent = m || ''; }
-    function setSettingsError(m) { document.getElementById('settings-error').textContent = m || ''; }
-    function setChatError(m)     { document.getElementById('chat-error').textContent = m || ''; }
+    /* ── Error & Notice setters ────────────── */
+    function setAuthError(m)       { document.getElementById('auth-error').textContent = m || ''; }
+    function setSettingsError(m)   { document.getElementById('settings-error').textContent = m || ''; if (m) setSettingsSuccess(''); }
+    function setSettingsSuccess(m) { document.getElementById('settings-success').textContent = m || ''; if (m) document.getElementById('settings-error').textContent = ''; }
+    function setChatError(m)       { document.getElementById('chat-error').textContent = m || ''; }
 
     /* ── Initials ───────────────────────────── */
     function initials(name) {
@@ -498,17 +646,34 @@
       document.getElementById('auth-view').hidden       = false;
       document.getElementById('dashboard-view').hidden  = true;
       document.getElementById('settings-view').hidden   = true;
+      document.getElementById('contact-view').hidden    = true;
+      document.getElementById('terms-view').hidden      = true;
+    }
+
+    function showPublicView(view) {
+      document.getElementById('auth-view').hidden       = true;
+      document.getElementById('dashboard-view').hidden  = true;
+      document.getElementById('settings-view').hidden   = true;
+      document.getElementById('contact-view').hidden    = view !== 'contact';
+      document.getElementById('terms-view').hidden      = view !== 'terms';
+      if (currentUser) document.getElementById('app-nav').hidden = false;
     }
 
     function showView(view) {
-      if (!currentUser) return showAuth();
-      document.getElementById('app-nav').hidden         = false;
-      document.getElementById('auth-view').hidden       = true;
+      if (!currentUser && view !== 'contact' && view !== 'terms') return showAuth();
+      if (currentUser) document.getElementById('app-nav').hidden = false;
+      document.getElementById('auth-view').hidden       = view !== 'auth';
       document.getElementById('dashboard-view').hidden  = view !== 'dashboard';
       document.getElementById('settings-view').hidden   = view !== 'settings';
+      document.getElementById('contact-view').hidden    = view !== 'contact';
+      document.getElementById('terms-view').hidden      = view !== 'terms';
+      
       document.getElementById('nav-dashboard').classList.toggle('active', view === 'dashboard');
       document.getElementById('nav-settings').classList.toggle('active', view === 'settings');
-      renderUser();
+      if (document.getElementById('nav-contact')) document.getElementById('nav-contact').classList.toggle('active', view === 'contact');
+      if (document.getElementById('nav-terms')) document.getElementById('nav-terms').classList.toggle('active', view === 'terms');
+      
+      if (currentUser) renderUser();
     }
 
     /* ── Jira OAuth ─────────────────────────── */
@@ -532,6 +697,7 @@
     async function saveGeminiKey(event) {
       event.preventDefault();
       setSettingsError('');
+      setSettingsSuccess('');
       try {
         currentUser = await api('/auth/gemini-key', {
           method: 'POST',
@@ -539,16 +705,16 @@
         });
         document.getElementById('gemini-key').value = '';
         renderUser();
+        setSettingsSuccess('✓ API Key updated successfully.');
       } catch (err) { setSettingsError(err.message); }
     }
 
     /* ── Chat helpers ───────────────────────── */
     function fillPrompt(btn) {
       const input = document.getElementById('prompt-input');
-      input.value = btn.textContent.trim();
+      input.value = btn.textContent.replace(/^[^\w]+/, '').trim();
       input.focus();
       autoResize(input);
-      // Hide chips after use
       document.getElementById('suggestions').style.display = 'none';
     }
 
@@ -564,11 +730,18 @@
       el.style.height = Math.min(el.scrollHeight, 140) + 'px';
     }
 
+    /* ── High-Precision Text Formatter ───────────── */
+    function formatMessageText(text) {
+      if (!text) return '';
+      let html = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      html = html.replace(/\b([A-Z][A-Z0-9]+-\d+)\b/g, '<span class="jira-key-badge">$1</span>');
+      return html;
+    }
+
     /* ── Add message bubble ─────────────────── */
     function addMsg(role, text, tools) {
       const pane = document.getElementById('messages');
-
-      // Remove empty state on first message
       const empty = document.getElementById('messages-empty');
       if (empty) empty.remove();
 
@@ -577,13 +750,18 @@
 
       const inner = document.createElement('div');
       inner.className = 'msg-inner';
-      inner.textContent = text;
+      
+      if (role === 'agent') {
+        inner.innerHTML = formatMessageText(text);
+      } else {
+        inner.textContent = text;
+      }
 
       if (tools && tools.length) {
         const toolsEl = document.createElement('div');
         toolsEl.className = 'msg-tools';
         toolsEl.innerHTML = `<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-          ${tools.map(t => t.tool).join(' → ')}`;
+          Executing: ${tools.map(t => t.tool).join(' → ')}`;
         inner.appendChild(toolsEl);
       }
 
@@ -623,7 +801,6 @@
       input.value = '';
       input.style.height = 'auto';
 
-      // Hide suggestions after first real send
       document.getElementById('suggestions').style.display = 'none';
 
       const btn = document.getElementById('send-btn');

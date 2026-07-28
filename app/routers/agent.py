@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,6 +27,11 @@ class ChatResponse(BaseModel):
     response: str
     tool_calls: list[dict]
     iterations: int
+
+
+@router.get("/chat", include_in_schema=False)
+async def chat_get_redirect():
+    return RedirectResponse(url="/")
 
 
 @router.post("/chat", response_model=ChatResponse)

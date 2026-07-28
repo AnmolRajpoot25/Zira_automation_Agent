@@ -1,4 +1,4 @@
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 
 
 def _get_fernet() -> Fernet:
@@ -16,7 +16,10 @@ def encrypt_value(plaintext: str | None) -> str | None:
 def decrypt_value(ciphertext: str | None) -> str | None:
     if ciphertext is None:
         return None
-    return _get_fernet().decrypt(ciphertext.encode()).decode()
+    try:
+        return _get_fernet().decrypt(ciphertext.encode()).decode()
+    except Exception:
+        return None
 
 
 encrypt_token = encrypt_value

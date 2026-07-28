@@ -1,4 +1,4 @@
-﻿import json
+import json
 import httpx
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -328,10 +328,10 @@ async def run_agent(db: AsyncSession, user: User, user_prompt: str) -> dict:
     jira_account_id = jira_identity["accountId"]
     jira_display_name = jira_identity.get("displayName") or user.name
 
-    # =========================================================================
-    # NEW PROXY CONFIGURATION
-    # Replace the "api_endpoint" string below with your Cloudflare Worker URL
-    # =========================================================================
+    # Force reset cached client so updated API keys take effect immediately
+    import google.generativeai.client as genai_client
+    genai_client._client_manager.clients.clear()
+
     genai.configure(
         api_key=gemini_api_key,
         transport="rest",
