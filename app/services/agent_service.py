@@ -1,11 +1,11 @@
 import json
+import logging
 import httpx
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-import google.generativeai as genai
-from google.generativeai.types import FunctionDeclaration, Tool, GenerationConfig
-from google.api_core.client_options import ClientOptions  # NEW IMPORT
+from google import genai
+from google.genai import types
 
 from app.core.config import get_settings
 from app.core.crypto import decrypt_value
@@ -21,6 +21,7 @@ from app.services.oauth_service import (
     get_valid_access_token,
 )
 
+logger = logging.getLogger(__name__)
 settings = get_settings()
 
 MAX_ITERATIONS = 10
@@ -80,10 +81,13 @@ async def _jira_call(method, path, access_token, cloud_id, **kwargs):
 
 async def _execute_tool(name, args, access_token, cloud_id, account_id, display_name):
     try:
-        if name == "get_current_user":
+        # Normalize name in case of namespace prefixes e.g. default_api:get_projects
+        clean_name = name.split(":")[-1]
+
+        if clean_name == "get_current_user":
             return json.dumps({"accountId": account_id, "displayName": display_name})
 
-        elif name == "get_issue":
+        elif clean_name == "get_issue":
             data = await _jira_call("get", f"/issue/{args['issue_key']}", access_token, cloud_id)
             fields = data.get("fields", {})
             return json.dumps({
@@ -98,7 +102,7 @@ async def _execute_tool(name, args, access_token, cloud_id, account_id, display_
                 "reporter": (fields.get("reporter") or {}).get("displayName"),
             })
 
-        elif name == "search_issues":
+        elif clean_name == "search_issues":
             max_r = min(args.get("max_results", 10), 20)
             data = await _jira_call(
                 "get", "/search", access_token, cloud_id,
@@ -118,7 +122,7 @@ async def _execute_tool(name, args, access_token, cloud_id, account_id, display_
                 for i in data.get("issues", [])
             ])
 
-        elif name == "create_issue":
+        elif clean_name == "create_issue":
             project_key = args["project_key"]
             summary = args["summary"]
             issue_type = args.get("issue_type", "Task")
@@ -155,7 +159,7 @@ async def _execute_tool(name, args, access_token, cloud_id, account_id, display_
                 "message": f"Issue {data.get('key')} created successfully.",
             })
 
-        elif name == "update_issue":
+        elif clean_name == "update_issue":
             key = args["issue_key"]
             payload: dict = {"fields": {}}
 
@@ -195,12 +199,12 @@ async def _execute_tool(name, args, access_token, cloud_id, account_id, display_
 
             return json.dumps({"success": True, "issue_key": key, "message": f"Issue {key} updated."})
 
-        elif name == "delete_issue":
+        elif clean_name == "delete_issue":
             key = args["issue_key"]
             await _jira_call("delete", f"/issue/{key}", access_token, cloud_id)
             return json.dumps({"success": True, "message": f"Issue {key} deleted."})
 
-        elif name == "add_comment":
+        elif clean_name == "add_comment":
             key = args["issue_key"]
             data = await _jira_call("post", f"/issue/{key}/comment", access_token, cloud_id,
                                     json={"body": {
@@ -211,36 +215,42 @@ async def _execute_tool(name, args, access_token, cloud_id, account_id, display_
                                     }})
             return json.dumps({"success": True, "comment_id": data.get("id")})
 
-        elif name == "get_transitions":
+        elif clean_name == "get_transitions":
             data = await _jira_call("get", f"/issue/{args['issue_key']}/transitions", access_token, cloud_id)
             transitions = [{"id": t["id"], "name": t["name"]} for t in data.get("transitions", [])]
             return json.dumps({"transitions": transitions})
 
-        elif name == "get_projects":
+        elif clean_name == "get_projects":
             data = await _jira_call("get", "/project", access_token, cloud_id)
             projects = [{"key": p["key"], "name": p["name"], "id": p["id"]} for p in data]
             return json.dumps({"projects": projects})
 
         else:
-            return json.dumps({"error": f"Unknown tool: {name}"})
+            return json.dumps({"error": f"Unknown tool: {clean_name}"})
 
     except Exception as exc:
         return json.dumps({"error": str(exc)})
 
 
 def _build_gemini_tools(account_id, display_name):
-    return [Tool(function_declarations=[
-        FunctionDeclaration(
+    declarations = [
+        types.FunctionDeclaration(
             name="get_current_user",
             description=f"Returns current user profile. accountId={account_id}, displayName={display_name}. Use when user says 'me', 'myself', or 'I'.",
-            parameters={"type": "object", "properties": {}},
+            parameters={
+                "type": "object",
+                "properties": {},
+            },
         ),
-        FunctionDeclaration(
+        types.FunctionDeclaration(
             name="get_projects",
             description="Get all Jira projects the user has access to. Use this to find project keys before creating issues.",
-            parameters={"type": "object", "properties": {}},
+            parameters={
+                "type": "object",
+                "properties": {},
+            },
         ),
-        FunctionDeclaration(
+        types.FunctionDeclaration(
             name="get_issue",
             description="Fetch a Jira issue by its key (e.g. PROJ-123). Returns full details.",
             parameters={
@@ -251,7 +261,7 @@ def _build_gemini_tools(account_id, display_name):
                 "required": ["issue_key"],
             },
         ),
-        FunctionDeclaration(
+        types.FunctionDeclaration(
             name="search_issues",
             description="Search Jira issues using JQL. Returns up to 20 results. Use for listing, filtering, finding issues.",
             parameters={
@@ -264,7 +274,7 @@ def _build_gemini_tools(account_id, display_name):
                 "required": ["jql"],
             },
         ),
-        FunctionDeclaration(
+        types.FunctionDeclaration(
             name="create_issue",
             description="Create a new Jira issue/task/bug/story. Must have project_key and summary.",
             parameters={
@@ -282,7 +292,7 @@ def _build_gemini_tools(account_id, display_name):
                 "required": ["project_key", "summary"],
             },
         ),
-        FunctionDeclaration(
+        types.FunctionDeclaration(
             name="update_issue",
             description="Update an existing Jira issue. Only provide fields you want to change.",
             parameters={
@@ -300,7 +310,7 @@ def _build_gemini_tools(account_id, display_name):
                 "required": ["issue_key"],
             },
         ),
-        FunctionDeclaration(
+        types.FunctionDeclaration(
             name="delete_issue",
             description="Delete a Jira issue permanently. Use with caution.",
             parameters={
@@ -311,7 +321,7 @@ def _build_gemini_tools(account_id, display_name):
                 "required": ["issue_key"],
             },
         ),
-        FunctionDeclaration(
+        types.FunctionDeclaration(
             name="add_comment",
             description="Add a comment to a Jira issue.",
             parameters={
@@ -323,7 +333,7 @@ def _build_gemini_tools(account_id, display_name):
                 "required": ["issue_key", "body"],
             },
         ),
-        FunctionDeclaration(
+        types.FunctionDeclaration(
             name="get_transitions",
             description="Get available status transitions for an issue. Use before changing status to know valid options.",
             parameters={
@@ -334,7 +344,8 @@ def _build_gemini_tools(account_id, display_name):
                 "required": ["issue_key"],
             },
         ),
-    ])]
+    ]
+    return [types.Tool(function_declarations=declarations)]
 
 
 async def run_agent(db: AsyncSession, user: User, user_prompt: str) -> dict:
@@ -415,79 +426,91 @@ async def run_agent(db: AsyncSession, user: User, user_prompt: str) -> dict:
     jira_account_id = jira_identity["accountId"]
     jira_display_name = jira_identity.get("displayName") or user.name
 
-    # Force reset cached client so updated API keys take effect immediately
-    import google.generativeai.client as genai_client
-    genai_client._client_manager.clients.clear()
-
-    genai.configure(
-        api_key=gemini_api_key,
-        transport="rest",
-        client_options=ClientOptions(
-            api_endpoint="geminiproxy.rajpootanmol779.workers.dev"
-        )
-    )
+    # Initialize google-genai Client with optional proxy
+    proxy_url = getattr(settings, "gemini_proxy_url", "https://geminiproxy.rajpootanmol779.workers.dev")
+    http_options = types.HttpOptions(base_url=proxy_url) if proxy_url else None
+    client = genai.Client(api_key=gemini_api_key, http_options=http_options)
 
     system_prompt = _build_system_prompt(user, jira_identity, connection.cloud_id)
     tools = _build_gemini_tools(jira_account_id, jira_display_name)
 
-    model = genai.GenerativeModel(
-        model_name=settings.gemini_model,
+    config = types.GenerateContentConfig(
+        temperature=0.2,
+        max_output_tokens=2048,
         system_instruction=system_prompt,
         tools=tools,
-        generation_config=GenerationConfig(temperature=0.2, max_output_tokens=2048),
     )
 
-    chat = model.start_chat(history=[])
+    contents = [
+        types.Content(role="user", parts=[types.Part.from_text(text=user_prompt)])
+    ]
     tool_call_log: list[dict] = []
     final_text = ""
 
-    # Try block added just in case the proxy throws a specific error, to help debug
-    try:
-        response = chat.send_message(user_prompt)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"AI Provider Error: {str(e)}")
+    for iteration in range(MAX_ITERATIONS):
+        try:
+            response = client.models.generate_content(
+                model=settings.gemini_model,
+                contents=contents,
+                config=config,
+            )
+        except Exception as e:
+            logger.error("AI provider error during generate_content: %s", e)
+            raise HTTPException(status_code=500, detail=f"AI Provider Error: {str(e)}")
 
-    import google.generativeai.protos as protos
+        if not response.candidates or not response.candidates[0].content:
+            break
 
-    for _ in range(MAX_ITERATIONS):
-        parts = response.candidates[0].content.parts
-        function_calls = [p for p in parts if hasattr(p, "function_call") and p.function_call.name]
-        text_parts = [p.text for p in parts if hasattr(p, "text") and p.text]
+        candidate_content = response.candidates[0].content
+        parts = candidate_content.parts or []
 
+        text_parts = [p.text for p in parts if getattr(p, "text", None)]
         if text_parts:
             final_text = " ".join(text_parts)
+
+        function_calls = [
+            p.function_call for p in parts
+            if getattr(p, "function_call", None) and p.function_call.name
+        ]
 
         if not function_calls:
             return {
                 "response": final_text,
                 "tool_calls": tool_call_log,
-                "iterations": _ + 1,
+                "iterations": iteration + 1,
             }
+
+        # IMPORTANT: Append the model's exact candidate content to the contents history.
+        # This preserves the functionCall AND its thought_signature exactly as received!
+        contents.append(candidate_content)
 
         tool_response_parts = []
         for fc in function_calls:
-            fn_name = fc.function_call.name
-            fn_args = dict(fc.function_call.args)
-            tool_call_log.append({"tool": fn_name, "input": fn_args})
+            raw_fn_name = fc.name
+            clean_fn_name = raw_fn_name.split(":")[-1]
+            fn_args = dict(fc.args or {})
+            tool_call_log.append({"tool": clean_fn_name, "input": fn_args})
 
             result_str = await _execute_tool(
-                fn_name, fn_args,
+                clean_fn_name, fn_args,
                 access_token, connection.cloud_id,
                 jira_account_id, jira_display_name,
             )
-            result_data = json.loads(result_str)
+            try:
+                result_data = json.loads(result_str)
+            except Exception:
+                result_data = {"result": result_str}
+
             tool_call_log[-1]["result"] = "success" if "error" not in result_data else result_data["error"]
 
             tool_response_parts.append(
-                protos.Part(
-                    function_response=protos.FunctionResponse(
-                        name=fn_name,
-                        response={"result": result_data},
-                    )
+                types.Part.from_function_response(
+                    name=raw_fn_name,
+                    response={"result": result_data},
                 )
             )
 
-        response = chat.send_message(tool_response_parts)
+        contents.append(types.Content(role="user", parts=tool_response_parts))
 
     return {
         "response": final_text or "Reached maximum steps. Please try a more specific request.",

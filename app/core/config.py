@@ -33,6 +33,11 @@ class Settings(BaseSettings):
         env="GEMINI_MODEL"
     )
 
+    gemini_proxy_url: str = Field(
+        default="https://geminiproxy.rajpootanmol779.workers.dev",
+        env="GEMINI_PROXY_URL"
+    )
+
     app_env: str = Field(
         default="development",
         env="APP_ENV"
