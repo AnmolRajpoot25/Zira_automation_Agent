@@ -31,10 +31,21 @@ async def jira_callback(
     if user is None:
         raise HTTPException(status_code=404, detail="User not found.")
 
-    token_data = await oauth_service.exchange_code_for_tokens(code)
-    cloud_id = await oauth_service.fetch_cloud_id(token_data["access_token"])
-    await oauth_service.upsert_jira_connection(db, user, cloud_id, token_data)
-    return RedirectResponse(f"{settings.frontend_url}/?jira=connected")
+    try:
+        token_data = await oauth_service.exchange_code_for_tokens(code)
+        cloud_id = await oauth_service.fetch_cloud_id(token_data["access_token"])
+        await oauth_service.upsert_jira_connection(db, user, cloud_id, token_data)
+        return RedirectResponse(f"{settings.frontend_url}/?jira=connected")
+    except oauth_service.JiraResourceNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except oauth_service.JiraPermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc))
+    except oauth_service.JiraAuthenticationError as exc:
+        raise HTTPException(status_code=401, detail=str(exc))
+    except oauth_service.JiraOAuthError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="Failed to complete Jira authorization.")
 
 
 @router.delete("/disconnect")

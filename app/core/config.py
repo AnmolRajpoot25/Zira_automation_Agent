@@ -15,9 +15,18 @@ class Settings(BaseSettings):
     atlassian_client_secret: str = Field(..., env="ATLASSIAN_CLIENT_SECRET")
     atlassian_redirect_uri: str = Field(..., env="ATLASSIAN_REDIRECT_URI")
 
-    atlassian_auth_url: str = "https://auth.atlassian.com/authorize"
-    atlassian_token_url: str = "https://auth.atlassian.com/oauth/token"
-    atlassian_api_base: str = "https://api.atlassian.com"
+    atlassian_auth_url: str = Field(
+        default="https://auth.atlassian.com/authorize",
+        env="ATLASSIAN_AUTH_URL",
+    )
+    atlassian_token_url: str = Field(
+        default="https://auth.atlassian.com/oauth/token",
+        env="ATLASSIAN_TOKEN_URL",
+    )
+    atlassian_api_base: str = Field(
+        default="https://api.atlassian.com",
+        env="ATLASSIAN_API_BASE",
+    )
 
     gemini_model: str = Field(
         default="gemini-2.5-flash-lite",
@@ -54,10 +63,14 @@ class Settings(BaseSettings):
         env="ACCESS_TOKEN_EXPIRE_MINUTES"
     )
 
-    oauth_scopes: str = (
-        "read:jira-work write:jira-work "
-        "read:jira-user offline_access"
+    atlassian_scopes: str = Field(
+        default="read:jira-work write:jira-work read:jira-user offline_access",
+        env="ATLASSIAN_SCOPES",
     )
+
+    @property
+    def oauth_scopes(self) -> str:
+        return self.atlassian_scopes
 
     @property
     def sqlalchemy_database_url(self) -> str:

@@ -10,7 +10,16 @@ from google.api_core.client_options import ClientOptions  # NEW IMPORT
 from app.core.config import get_settings
 from app.core.crypto import decrypt_value
 from app.models.user import JiraConnection, User
-from app.services.oauth_service import fetch_current_jira_user, get_valid_access_token
+from app.services.oauth_service import (
+    JiraAPIError,
+    JiraAuthenticationError,
+    JiraOAuthError,
+    JiraPermissionError,
+    JiraResourceNotFoundError,
+    fetch_cloud_id,
+    fetch_current_jira_user,
+    get_valid_access_token,
+)
 
 settings = get_settings()
 
@@ -40,7 +49,7 @@ Guidelines:
 
 
 async def _jira_call(method, path, access_token, cloud_id, **kwargs):
-    base = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3"
+    base = f"{settings.atlassian_api_base}/ex/jira/{cloud_id}/rest/api/3"
     headers = {
         "Authorization": f"Bearer {access_token}",
         "Accept": "application/json",
@@ -323,8 +332,69 @@ async def run_agent(db: AsyncSession, user: User, user_prompt: str) -> dict:
     if gemini_api_key is None:
         raise HTTPException(status_code=400, detail="Add your Gemini API key in settings first.")
 
-    access_token = await get_valid_access_token(db, connection)
-    jira_identity = await fetch_current_jira_user(access_token, connection.cloud_id)
+    try:
+        access_token = await get_valid_access_token(db, connection)
+    except JiraAuthenticationError as exc:
+        raise HTTPException(
+            status_code=401,
+            detail="Jira connection expired or authentication failed. Please reconnect Jira in settings.",
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to retrieve Jira access token. Please reconnect Jira in settings.",
+        ) from exc
+
+    try:
+        jira_identity = await fetch_current_jira_user(access_token, connection.cloud_id)
+    except JiraResourceNotFoundError:
+        # The stored cloud_id returned 404 (possibly stale, invalid, or changed site).
+        # Attempt automatic re-discovery of accessible Jira resources.
+        try:
+            new_cloud_id = await fetch_cloud_id(access_token)
+            if new_cloud_id != connection.cloud_id:
+                connection.cloud_id = new_cloud_id
+                await db.commit()
+                await db.refresh(connection)
+                jira_identity = await fetch_current_jira_user(access_token, connection.cloud_id)
+            else:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Jira site not found or access revoked. Please reconnect your Jira account.",
+                )
+        except HTTPException:
+            raise
+        except JiraResourceNotFoundError as exc:
+            raise HTTPException(
+                status_code=404,
+                detail="No accessible Jira site found. Please reconnect Jira.",
+            ) from exc
+        except Exception as exc:
+            raise HTTPException(
+                status_code=404,
+                detail="Jira site not found or access revoked. Please reconnect your Jira account.",
+            ) from exc
+    except JiraAuthenticationError as exc:
+        raise HTTPException(
+            status_code=401,
+            detail="Jira authentication failed. Please reconnect your Jira account.",
+        ) from exc
+    except JiraPermissionError as exc:
+        raise HTTPException(
+            status_code=403,
+            detail=str(exc),
+        ) from exc
+    except JiraAPIError as exc:
+        raise HTTPException(
+            status_code=exc.status_code,
+            detail=exc.detail,
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="Error retrieving Jira user identity.",
+        ) from exc
+
     jira_account_id = jira_identity["accountId"]
     jira_display_name = jira_identity.get("displayName") or user.name
 
