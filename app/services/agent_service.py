@@ -49,7 +49,8 @@ Guidelines:
 
 
 async def _jira_call(method, path, access_token, cloud_id, **kwargs):
-    base = f"{settings.atlassian_api_base}/ex/jira/{cloud_id}/rest/api/3"
+    clean_cloud_id = cloud_id.strip()
+    base = f"{settings.atlassian_api_base}/ex/jira/{clean_cloud_id}/rest/api/3"
     headers = {
         "Authorization": f"Bearer {access_token}",
         "Accept": "application/json",
@@ -57,7 +58,23 @@ async def _jira_call(method, path, access_token, cloud_id, **kwargs):
     }
     async with httpx.AsyncClient(headers=headers, timeout=20) as client:
         resp = await getattr(client, method)(f"{base}{path}", **kwargs)
-        resp.raise_for_status()
+        if resp.is_error:
+            detail = ""
+            try:
+                err_data = resp.json()
+                if isinstance(err_data, dict):
+                    err_msgs = err_data.get("errorMessages", [])
+                    field_errs = err_data.get("errors", {})
+                    combined = []
+                    if err_msgs:
+                        combined.extend(err_msgs)
+                    if field_errs:
+                        combined.extend([f"{k}: {v}" for k, v in field_errs.items()])
+                    if combined:
+                        detail = " - " + "; ".join(combined)
+            except Exception:
+                pass
+            raise Exception(f"Jira API error ({resp.status_code}){detail}")
         return resp.json() if resp.content else {}
 
 
